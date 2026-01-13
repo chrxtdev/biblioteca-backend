@@ -19,7 +19,8 @@ class Book extends Model
         'file_path',
         'cover_path',
         'is_verified',
-        'user_id'
+        'user_id',
+        'rejection_reason',
     ];
 
     const COURSES = [

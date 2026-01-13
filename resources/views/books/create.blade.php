@@ -63,7 +63,9 @@
 
         <div>
             <label class="block text-gray-700 font-bold mb-2">Curso Relacionado</label>
-            <select name="course" class="w-full p-2 border border-gray-300 rounded focus:outline-none focus:border-blue-500 bg-white" required>
+            <select name="course"
+                    class="w-full p-2 border border-gray-300 rounded focus:outline-none focus:border-blue-500 bg-white"
+                    required>
                 <option value="" disabled selected>Selecione um curso...</option>
                 @foreach(\App\Models\Book::COURSES as $value => $label)
                     <option value="{{ $value }}">{{ $label }}</option>
