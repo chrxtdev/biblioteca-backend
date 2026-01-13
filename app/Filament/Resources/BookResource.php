@@ -13,6 +13,7 @@ use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\SoftDeletingScope;
 use Filament\Tables\Actions\Action;
+use Filament\Forms\Components\Textarea;
 
 class BookResource extends Resource
 {
@@ -95,7 +96,32 @@ class BookResource extends Resource
                 //
             ])
             ->actions([
+                Action::make('aprovar')
+                    ->icon('heroicon-o-check-circle')
+                    ->color('success')
+                    ->requiresConfirmation()
+                    ->action(function (Book $record) {
+                        $record->update(['is_verified' => true, 'rejection_reason' => null]);
+                    })
+                    ->visible(fn(Book $record) => !$record->is_verified),
+
+                Action::make('rejeitar')
+                    ->icon('heroicon-o-x-circle')
+                    ->color('danger')
+                    ->form([
+                        Textarea::make('reason')
+                            ->label('Motivo da Recusa')
+                            ->required()
+                            ->rows(4),
+                    ])
+                    ->action(function (Book $record, array $data) {
+                        $record->update([
+                            'is_verified' => false,
+                            'rejection_reason' => $data['reason'],
+                        ]);
+                    }),
                 Tables\Actions\EditAction::make(),
+                Tables\Actions\DeleteAction::make(),
             ])
             ->bulkActions([
                 Tables\Actions\BulkActionGroup::make([

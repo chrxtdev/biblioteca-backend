@@ -13,7 +13,7 @@ class BookController extends Controller
         $books = Book::where('is_verified', true)
             ->orderBy('created_at', 'desc')
             ->get();
-        
+
         $books->transform(function ($book) {
             return [
                 'id' => $book->id,
@@ -98,9 +98,9 @@ class BookController extends Controller
             return [
                 'id' => $book->id,
                 'title' => $book->title,
-                'status' => $book->is_verified ? 'Aprovado' : 'Em Análise',
-                'created_at' => $book->created_at,
-                'file_url' => asset('storage/' . $book->file_path),
+                'status' => $book->is_verified ? 'Aprovado' : ($book->rejection_reason ? 'Recusado' : 'Em Análise'),
+                'rejection_reason' => $book->rejection_reason,
+                'cover_url' => $book->cover_path ? asset('storage/' . $book->cover_path) : null,
             ];
         });
 
