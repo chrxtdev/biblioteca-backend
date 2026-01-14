@@ -51,7 +51,9 @@
                                                     Recusado
                                                 </span>
                                                 <button
-                                                    onclick="alert('MOTIVO DA RECUSA:\n\n{{ $myBook->rejection_reason }}')"
+                                                    x-data=""
+                                                    x-on:click="alert('MOTIVO DA RECUSA:\n\n' + $el.dataset.reason)"
+                                                    data-reason="{{ $myBook->rejection_reason }}"
                                                     class="text-xs text-red-600 underline hover:text-red-800 cursor-pointer"
                                                 >
                                                     Ver motivo
