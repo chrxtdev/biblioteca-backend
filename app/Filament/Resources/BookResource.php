@@ -110,7 +110,7 @@ class BookResource extends Resource
                     ->color('danger')
                     ->form([
                         Textarea::make('reason')
-                            ->label('Motivo da Recusa')
+                            ->label('Motivo da Rejeição')
                             ->required()
                             ->rows(4),
                     ])

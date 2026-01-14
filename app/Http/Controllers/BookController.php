@@ -16,14 +16,23 @@ class BookController extends Controller
 
         $books->transform(function ($book) {
             return [
-                'id' => $book->id,
-                'title' => $book->title,
-                'author' => $book->author,
-                'description' => $book->description,
-                'course' => $book->course,
-                'status' => $book->is_verified ? 'Aprovado' : 'Em Análise',
-                'file_url' => asset('storage/' . $book->file_path),
-                'cover_url' => $book->cover_path ? asset('storage/' . $book->cover_path) : null,
+                'id' => $book
+                    ->id,
+                'title' => $book
+                    ->title,
+                'author' => $book
+                    ->author,
+                'description' => $book
+                    ->description,
+                'course' => $book
+                    ->course,
+                'status' => $book
+                    ->is_verified ? 'Aprovado' : 'Em Análise',
+                'file_url' => asset('storage/' . $book
+                    ->file_path),
+                'cover_url' => $book
+                    ->cover_path ? asset('storage/' . $book
+                        ->cover_path) : null,
             ];
         });
         return response()
@@ -47,27 +56,35 @@ class BookController extends Controller
         ]);
 
         if ($request->hasFile('file_path')) {
-            $path = $request->file('file_path')->store('livros_pdfs', 'public');
+            $path = $request
+                ->file('file_path')->store('livros_pdfs', 'public');
         } else {
-            return back()->with('error', 'O arquivo é obrigatório');
+            return back()
+                ->with('error', 'O arquivo é obrigatório');
         }
 
         $capaPath = null;
         if ($request
-            ->hasFile('cover_path')) {
+            ->hasFile('cover_path')
+        ) {
             $capaPath = $request
                 ->file('cover_path')
                 ->store('livros_capas', 'public');
         }
 
         $book = Book::create([
-            'title' => $request->title,
-            'author' => $request->author,
-            'description' => $request->description,
-            'course' => $request->course,
+            'title' => $request
+                ->title,
+            'author' => $request
+                ->author,
+            'description' => $request
+                ->description,
+            'course' => $request
+                ->course,
             'file_path' => $path,
             'cover_path' => $capaPath,
-            'user_id' => auth()->id(),
+            'user_id' => auth()
+                ->id(),
             'is_verified' => false,
         ]);
 
@@ -82,7 +99,7 @@ class BookController extends Controller
             ->with('status', 'livro-enviado');
     }
 
-    public function myBooks(Request $request)
+    public function myBooks(Request $request): mixed
     {
         $user = $request->user();
 
@@ -96,11 +113,16 @@ class BookController extends Controller
 
         $books->transform(function ($book) {
             return [
-                'id' => $book->id,
-                'title' => $book->title,
-                'status' => $book->is_verified ? 'Aprovado' : ($book->rejection_reason ? 'Recusado' : 'Em Análise'),
-                'rejection_reason' => $book->rejection_reason,
-                'cover_url' => $book->cover_path ? asset('storage/' . $book->cover_path) : null,
+                'id' => $book
+                    ->id,
+                'title' => $book
+                    ->title,
+                'status' => $book
+                    ->is_verified ? 'Aprovado' : ($book->rejection_reason ? 'Recusado' : 'Em Análise'),
+                'rejection_reason' => $book
+                    ->rejection_reason,
+                'cover_url' => $book
+                    ->cover_path ? asset('storage/' . $book->cover_path) : null,
             ];
         });
 
