@@ -52,7 +52,7 @@
                                                 </span>
                                                 <button
                                                     x-data=""
-                                                    x-on:click="alert('MOTIVO DA RECUSA:\n\n' + $el.dataset.reason)"
+                                                    x-on:click="alert('MOTIVO DA REJEIÇÃO:\n\n' + $el.dataset.reason)"
                                                     data-reason="{{ $myBook->rejection_reason }}"
                                                     class="text-xs text-red-600 underline hover:text-red-800 cursor-pointer"
                                                 >
