@@ -20,6 +20,10 @@ class BookResource extends Resource
 
     protected static ?string $navigationIcon = 'heroicon-o-rectangle-stack';
 
+    protected static ?string $modelLabel = 'Livro';
+    protected static ?string $pluralModelLabel = 'Livros';
+    protected static ?string $navigationLabel = 'Livros';
+
     public static function form(Form $form): Form
     {
         return $form
