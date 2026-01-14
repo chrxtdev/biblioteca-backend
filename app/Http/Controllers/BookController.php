@@ -29,7 +29,7 @@ class BookController extends Controller
                 'status' => $book
                     ->is_verified ? 'Aprovado' : 'Em Análise',
                 'file_url' => asset('storage/' . $book
-                    ->file_path),
+                        ->file_path),
                 'cover_url' => $book
                     ->cover_path ? asset('storage/' . $book
                         ->cover_path) : null,
@@ -99,33 +99,28 @@ class BookController extends Controller
             ->with('status', 'livro-enviado');
     }
 
-    public function myBooks(Request $request): mixed
+    public function myBooks(Request $request)
     {
-        $user = $request->user();
-
-        if (!$user) {
-            return response()->json(['message' => 'Não autenticado'], 401);
-        }
-
-        $books = Book::where('user_id', $user->id)
-            ->orderBy('created_at', 'desc')
-            ->get();
+        $books = $request->user()->books()->orderBy('created_at', 'desc')->get();
 
         $books->transform(function ($book) {
             return [
-                'id' => $book
-                    ->id,
-                'title' => $book
-                    ->title,
-                'status' => $book
-                    ->is_verified ? 'Aprovado' : ($book->rejection_reason ? 'Recusado' : 'Em Análise'),
-                'rejection_reason' => $book
-                    ->rejection_reason,
-                'cover_url' => $book
-                    ->cover_path ? asset('storage/' . $book->cover_path) : null,
+                'id' => $book->id,
+                'title' => $book->title,
+                'author' => $book->author,
+                'description' => $book->description,
+                'course' => $book->course,
+
+                'status' => $book->is_verified
+                    ? 'Aprovado'
+                    : ($book->rejection_reason ? 'Recusado' : 'Em Análise'),
+
+                'rejection_reason' => $book->rejection_reason,
+
+                'file_url' => asset('storage/' . $book->file_path),
+                'cover_url' => $book->cover_path ? asset('storage/' . $book->cover_path) : null,
             ];
         });
-
         return response()->json($books);
     }
 }

@@ -33,18 +33,40 @@
                             </thead>
                             <tbody>
                             @foreach($myBooks as $myBook)
-                                <tr class="border-b">
-                                    <td class="py-2">{{ $myBook->title }}</td>
-                                    <td class="py-2">
+                                <tr class="border-b hover:bg-gray-50">
+                                    <td class="py-3">{{ $myBook->title }}</td>
+
+                                    <td class="py-3">
+                                        {{-- LÓGICA DE STATUS ATUALIZADA --}}
                                         @if($myBook->is_verified)
                                             <span
-                                                class="bg-green-100 text-green-800 text-xs font-semibold px-2.5 py-0.5 rounded">Aprovado</span>
+                                                class="bg-green-100 text-green-800 text-xs font-semibold px-2.5 py-0.5 rounded">
+                                                Aprovado
+                                            </span>
+
+                                        @elseif($myBook->rejection_reason)
+                                            <div class="flex items-center gap-2">
+                                                <span
+                                                    class="bg-red-100 text-red-800 text-xs font-semibold px-2.5 py-0.5 rounded">
+                                                    Recusado
+                                                </span>
+                                                <button
+                                                    onclick="alert('MOTIVO DA RECUSA:\n\n{{ $myBook->rejection_reason }}')"
+                                                    class="text-xs text-red-600 underline hover:text-red-800 cursor-pointer"
+                                                >
+                                                    Ver motivo
+                                                </button>
+                                            </div>
+
                                         @else
                                             <span
-                                                class="bg-yellow-100 text-yellow-800 text-xs font-semibold px-2.5 py-0.5 rounded">Em Análise</span>
+                                                class="bg-yellow-100 text-yellow-800 text-xs font-semibold px-2.5 py-0.5 rounded">
+                                                Em Análise
+                                            </span>
                                         @endif
                                     </td>
-                                    <td class="py-2 text-sm text-gray-500">
+
+                                    <td class="py-3 text-sm text-gray-500">
                                         {{ $myBook->created_at->format('d/m/Y') }}
                                     </td>
                                 </tr>
@@ -64,11 +86,11 @@
                     @else
                         <ul>
                             @foreach($books as $book)
-                                <li class="mb-2 p-2 border-b">
+                                <li class="mb-2 p-2 border-b flex justify-between items-center">
                                     <span class="font-bold">{{ $book->title }}</span>
                                     <a href="{{ asset('storage/' . $book->file_path) }}" target="_blank"
-                                       class="text-blue-500 hover:underline ml-2">
-                                        Ler PDF
+                                       class="text-blue-500 hover:text-blue-700 text-sm font-medium">
+                                        Ler PDF →
                                     </a>
                                 </li>
                             @endforeach

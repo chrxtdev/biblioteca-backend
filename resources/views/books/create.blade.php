@@ -67,7 +67,7 @@
                     class="w-full p-2 border border-gray-300 rounded focus:outline-none focus:border-blue-500 bg-white"
                     required>
                 <option value="" disabled selected>Selecione um curso...</option>
-                @foreach(\App\Models\Book::COURSES as $value => $label)
+                @foreach(Book::COURSES as $value => $label)
                     <option value="{{ $value }}">{{ $label }}</option>
                 @endforeach
             </select>
