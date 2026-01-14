@@ -58,7 +58,7 @@ class EditBook extends EditRecord
                 ->icon('heroicon-o-x-circle')
                 ->form([
                     Textarea::make('reason')
-                        ->label('Motivo da Recusão?')
+                        ->label('Motivo da Rejeição?')
                         ->required()
                         ->default($this->record->rejection_reason),
                 ])

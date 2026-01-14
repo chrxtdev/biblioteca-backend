@@ -26,30 +26,42 @@
                         <table class="w-full text-left">
                             <thead>
                             <tr class="text-gray-500 text-sm">
-                                <th class="pb-2">Título</th>
-                                <th class="pb-2">Status</th>
-                                <th class="pb-2">Data</th>
+                                <th class="pb-2">Capa:</th>
+                                <th class="pb-2">Título:</th>
+                                <th class="pb-2">Autor:</th>
+                                <th class="pb-2">Status:</th>
+                                <th class="pb-2">Enviado em:</th>
                             </tr>
                             </thead>
                             <tbody>
                             @foreach($myBooks as $myBook)
                                 <tr class="border-b hover:bg-gray-50">
-                                    <td class="py-3">{{ $myBook->title }}</td>
+
+                                    <td class="py-3 pr-4">
+                                        @if($myBook->cover_path)
+                                            <img src="{{ asset('storage/' . $myBook->cover_path) }}"
+                                                 alt="Capa"
+                                                 class="w-12 h-20 object-cover rounded shadow-sm border border-gray-200">
+                                        @else
+                                            <div
+                                                class="w-12 h-16 bg-gray-200 rounded flex items-center justify-center text-gray-400 text-xs">
+                                                Sem Capa
+                                            </div>
+                                        @endif
+                                    </td>
+
+                                    <td class="py-3 font-medium text-gray-900">{{ $myBook->title }}</td>
+
+                                    <td class="py-3 text-gray-600">{{ $myBook->author }}</td>
 
                                     <td class="py-3">
-                                        {{-- LÓGICA DE STATUS ATUALIZADA --}}
                                         @if($myBook->is_verified)
                                             <span
-                                                class="bg-green-100 text-green-800 text-xs font-semibold px-2.5 py-0.5 rounded">
-                                                Aprovado
-                                            </span>
-
+                                                class="bg-green-100 text-green-800 text-xs font-semibold px-2.5 py-0.5 rounded">Aprovado</span>
                                         @elseif($myBook->rejection_reason)
                                             <div class="flex items-center gap-2">
                                                 <span
-                                                    class="bg-red-100 text-red-800 text-xs font-semibold px-2.5 py-0.5 rounded">
-                                                    Recusado
-                                                </span>
+                                                    class="bg-red-100 text-red-800 text-xs font-semibold px-2.5 py-0.5 rounded">Recusado</span>
                                                 <button
                                                     x-data=""
                                                     x-on:click="alert('MOTIVO DA REJEIÇÃO:\n\n' + $el.dataset.reason)"
@@ -59,12 +71,9 @@
                                                     Ver motivo
                                                 </button>
                                             </div>
-
                                         @else
                                             <span
-                                                class="bg-yellow-100 text-yellow-800 text-xs font-semibold px-2.5 py-0.5 rounded">
-                                                Em Análise
-                                            </span>
+                                                class="bg-yellow-100 text-yellow-800 text-xs font-semibold px-2.5 py-0.5 rounded">Em Análise</span>
                                         @endif
                                     </td>
 
@@ -84,19 +93,47 @@
                     <h3 class="text-lg font-bold mb-4">📚 Livros Disponíveis na Biblioteca</h3>
 
                     @if($books->isEmpty())
-                        <p>Nenhum livro disponível no momento.</p>
+                        <p class="text-gray-500 italic">Nenhum livro disponível no momento.</p>
                     @else
-                        <ul>
-                            @foreach($books as $book)
-                                <li class="mb-2 p-2 border-b flex justify-between items-center">
-                                    <span class="font-bold">{{ $book->title }}</span>
+                        <div class="grid gap-4"> @foreach($books as $book)
+                                <div
+                                    class="p-4 border rounded-lg hover:bg-gray-50 flex items-center justify-between transition duration-150">
+
+                                    <div class="flex items-center gap-4">
+
+                                        <div class="flex-shrink-0">
+                                            @if($book->cover_path)
+                                                <img src="{{ asset('storage/' . $book->cover_path) }}"
+                                                     alt="{{ $book->title }}"
+                                                     class="w-12 h-16 object-cover rounded shadow-sm border border-gray-200">
+                                            @else
+                                                <div
+                                                    class="w-12 h-16 bg-gray-200 rounded flex items-center justify-center text-gray-400">
+                                                    <svg class="w-6 h-6" fill="none" stroke="currentColor"
+                                                         viewBox="0 0 24 24">
+                                                        <path stroke-linecap="round" stroke-linejoin="round"
+                                                              stroke-width="2"
+                                                              d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"></path>
+                                                    </svg>
+                                                </div>
+                                            @endif
+                                        </div>
+
+                                        <div>
+                                            <h4 class="text-lg font-bold text-gray-800 leading-tight">{{ $book->title }}</h4>
+                                            <p class="text-sm text-gray-600">Por: {{ $book->author }}</p>
+                                            <p class="text-xs text-gray-400 mt-1">{{ $book->course ?? 'Geral' }}</p>
+                                        </div>
+                                    </div>
+
                                     <a href="{{ asset('storage/' . $book->file_path) }}" target="_blank"
-                                       class="text-blue-500 hover:text-blue-700 text-sm font-medium">
-                                        Ler PDF →
+                                       class="ml-4 px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 transition shadow-sm whitespace-nowrap">
+                                        Ler PDF
                                     </a>
-                                </li>
+
+                                </div>
                             @endforeach
-                        </ul>
+                        </div>
                     @endif
                 </div>
             </div>

@@ -69,20 +69,25 @@ class BookResource extends Resource
         return $table
             ->columns([
                 Tables\Columns\ImageColumn::make('cover_path')
-                    ->circular(),
+                    ->label('Capa:')
+                    ->width(90)
+                    ->height(150)
+                    ->square(false),
 
                 Tables\Columns\TextColumn::make('title')
-                    ->label('Título')
+                    ->label('Título:')
                     ->searchable()
                     ->sortable(),
 
                 Tables\Columns\TextColumn::make('author')
+                    ->label('Autor:')
                     ->searchable(),
 
                 Tables\Columns\TextColumn::make('user.name')
-                    ->label('Enviado por'),
+                    ->label('Enviado por:'),
 
                 Tables\Columns\TextColumn::make('created_at')
+                    ->label('Criado em:')
                     ->dateTime('d/m/Y H:i')
                     ->sortable(),
             ])
