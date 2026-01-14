@@ -2,41 +2,32 @@
 
 namespace App\Http\Controllers;
 
-use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Auth;
 use App\Models\Book;
+use Illuminate\Http\Request;
 
 class BookController extends Controller
 {
-    public function index()
+    public function index(Request $request)
     {
+        $search = $request->input('search');
         $books = Book::where('is_verified', true)
+            ->when($search, function ($query, $search) {
+                return $query->where(function ($q) use ($search) {
+                    $q->where('title', 'like', "%{$search}%")
+                        ->orWhere('author', 'like', "%{$search}%");
+                });
+            })
             ->orderBy('created_at', 'desc')
-            ->get();
+            ->paginate(10);
+        $myBooks = $request->user()->books()
+            ->orderBy('created_at', 'desc')
+            ->paginate(5, ['*'], 'my_page');
 
-        $books->transform(function ($book) {
-            return [
-                'id' => $book
-                    ->id,
-                'title' => $book
-                    ->title,
-                'author' => $book
-                    ->author,
-                'description' => $book
-                    ->description,
-                'course' => $book
-                    ->course,
-                'status' => $book
-                    ->is_verified ? 'Aprovado' : 'Em Análise',
-                'file_url' => asset('storage/' . $book
-                        ->file_path),
-                'cover_url' => $book
-                    ->cover_path ? asset('storage/' . $book
-                        ->cover_path) : null,
-            ];
-        });
-        return response()
-            ->json($books);
+        return view('dashboard', [
+            'books' => $books,
+            'myBooks' => $myBooks,
+            'search' => $search
+        ]);
     }
 
     public function create()
@@ -46,6 +37,7 @@ class BookController extends Controller
 
     public function store(Request $request)
     {
+        // ... (seu código de validação e upload continua igual) ...
         $dadosValidados = $request->validate([
             'title' => 'required|string|max:255',
             'author' => 'required|string|max:255',
@@ -56,71 +48,27 @@ class BookController extends Controller
         ]);
 
         if ($request->hasFile('file_path')) {
-            $path = $request
-                ->file('file_path')->store('livros_pdfs', 'public');
+            $path = $request->file('file_path')->store('livros_pdfs', 'public');
         } else {
-            return back()
-                ->with('error', 'O arquivo é obrigatório');
+            return back()->with('error', 'O arquivo é obrigatório');
         }
 
         $capaPath = null;
-        if ($request
-            ->hasFile('cover_path')
-        ) {
-            $capaPath = $request
-                ->file('cover_path')
-                ->store('livros_capas', 'public');
+        if ($request->hasFile('cover_path')) {
+            $capaPath = $request->file('cover_path')->store('livros_capas', 'public');
         }
 
         $book = Book::create([
-            'title' => $request
-                ->title,
-            'author' => $request
-                ->author,
-            'description' => $request
-                ->description,
-            'course' => $request
-                ->course,
+            'title' => $request->title,
+            'author' => $request->author,
+            'description' => $request->description,
+            'course' => $request->course,
             'file_path' => $path,
             'cover_path' => $capaPath,
-            'user_id' => auth()
-                ->id(),
+            'user_id' => auth()->id(),
             'is_verified' => false,
         ]);
 
-        if ($request->wantsJson()) {
-            return response()->json([
-                'message' => 'Livro enviado com sucesso!',
-                'book' => $book,
-            ], 201);
-        }
-
-        return to_route('dashboard')
-            ->with('status', 'livro-enviado');
-    }
-
-    public function myBooks(Request $request)
-    {
-        $books = $request->user()->books()->orderBy('created_at', 'desc')->get();
-
-        $books->transform(function ($book) {
-            return [
-                'id' => $book->id,
-                'title' => $book->title,
-                'author' => $book->author,
-                'description' => $book->description,
-                'course' => $book->course,
-
-                'status' => $book->is_verified
-                    ? 'Aprovado'
-                    : ($book->rejection_reason ? 'Recusado' : 'Em Análise'),
-
-                'rejection_reason' => $book->rejection_reason,
-
-                'file_url' => asset('storage/' . $book->file_path),
-                'cover_url' => $book->cover_path ? asset('storage/' . $book->cover_path) : null,
-            ];
-        });
-        return response()->json($books);
+        return to_route('dashboard')->with('status', 'livro-enviado');
     }
 }

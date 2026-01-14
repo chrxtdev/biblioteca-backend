@@ -10,7 +10,6 @@ use Illuminate\Support\Facades\Auth;
 
 class AuthController extends Controller
 {
-    // REGISTRO (O aluno cria conta pelo Next.js)
     public function register(Request $request)
     {
         $request->validate([
@@ -25,7 +24,6 @@ class AuthController extends Controller
             'password' => Hash::make($request->password),
         ]);
 
-        // Cria um token pra ele já sair logado
         $token = $user->createToken('auth_token')->plainTextToken;
 
         return response()->json([
@@ -35,7 +33,6 @@ class AuthController extends Controller
         ]);
     }
 
-    // LOGIN (O aluno entra pelo Next.js)
     public function login(Request $request)
     {
         if (!Auth::attempt($request->only('email', 'password'))) {
@@ -44,7 +41,6 @@ class AuthController extends Controller
 
         $user = User::where('email', $request->email)->firstOrFail();
 
-        // Deleta tokens antigos e cria um novo
         $user->tokens()->delete();
         $token = $user->createToken('auth_token')->plainTextToken;
 
@@ -56,7 +52,6 @@ class AuthController extends Controller
         ]);
     }
 
-    // LOGOUT
     public function logout(Request $request)
     {
         $request->user()->tokens()->delete();

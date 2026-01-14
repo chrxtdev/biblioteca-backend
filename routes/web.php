@@ -8,15 +8,9 @@ use App\Models\Book;
 Route::get('/', function () {
     return view('welcome');
 });
-
-Route::get('/dashboard', function () {
-
-    $books = Book::where('is_verified', true)->get();
-
-    $myBooks = Book::where('user_id', auth()->id())->get();
-
-    return view('dashboard', ['books' => $books, 'myBooks' => $myBooks]);
-})->middleware(['auth', 'verified'])->name('dashboard');
+Route::get('/dashboard', [BookController::class, 'index'])
+    ->middleware(['auth', 'verified'])
+    ->name('dashboard');
 
 Route::middleware('auth')->group(function () {
     Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
