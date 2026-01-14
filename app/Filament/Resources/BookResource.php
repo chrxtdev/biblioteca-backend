@@ -59,7 +59,7 @@ class BookResource extends Resource
 
                 Forms\Components\Select::make('course')
                     ->label('Curso Relacionado')
-                    ->options(\App\Models\Book::COURSES)
+                    ->options(Book::COURSES)
                     ->searchable()
                     ->required(),
             ]);
@@ -82,11 +82,6 @@ class BookResource extends Resource
 
                 Tables\Columns\TextColumn::make('user.name')
                     ->label('Enviado por'),
-
-                Tables\Columns\ToggleColumn::make('is_verified')
-                    ->label('Aprovado?')
-                    ->onColor('success')
-                    ->offColor('danger'),
 
                 Tables\Columns\TextColumn::make('created_at')
                     ->dateTime('d/m/Y H:i')
