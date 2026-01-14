@@ -6,6 +6,7 @@ use App\Filament\Resources\BookResource;
 use Filament\Actions;
 use Filament\Forms\Components\Textarea;
 use Filament\Resources\Pages\EditRecord;
+use Filament\Notifications\Notification;
 
 class EditBook extends EditRecord
 {
@@ -23,10 +24,33 @@ class EditBook extends EditRecord
                         'is_verified' => true,
                         'rejection_reason' => null
                     ]);
-                    $this->notify('success', 'Livro aprovado com sucesso!');
+                    Notification::make()
+                        ->title('Livro aprovado com sucesso!.')
+                        ->success()
+                        ->send();
                     $this->redirect($this->getResource()::getUrl('index'));
                 })
-                ->visible(fn () => !$this->record->is_verified),
+                ->visible(fn() => !$this->record->is_verified),
+
+            Actions\Action::make('retornar_analise')
+                ->label('Voltar para Análise')
+                ->color('warning')
+                ->icon('heroicon-o-arrow-path')
+                ->requiresConfirmation()
+                ->modalHeading('Desfazer Aprovação')
+                ->modalDescription('O livro deixará de aparecer no site. Deseja continuar?')
+                ->action(function () {
+                    $this->record->update([
+                        'is_verified' => false,
+                        'rejection_reason' => null
+                    ]);
+                    Notification::make()
+                        ->title('Livro voltou para análise.')
+                        ->warning()
+                        ->send();
+                    $this->redirect($this->getResource()::getUrl('index'));
+                })
+                ->visible(fn() => $this->record->is_verified),
 
             Actions\Action::make('rejeitar')
                 ->label('Rejeitar Livro')
@@ -34,7 +58,7 @@ class EditBook extends EditRecord
                 ->icon('heroicon-o-x-circle')
                 ->form([
                     Textarea::make('reason')
-                        ->label('Motivo da Recusa')
+                        ->label('Motivo da Recusão?')
                         ->required()
                         ->default($this->record->rejection_reason),
                 ])
@@ -43,11 +67,19 @@ class EditBook extends EditRecord
                         'is_verified' => false,
                         'rejection_reason' => $data['reason'],
                     ]);
-                    $this->notify('danger', 'Livro rejeitado!');
+                    Notification::make()
+                        ->title('Livro rejeitado!')
+                        ->body('O motivo foi salvo.')
+                        ->danger()
+                        ->send();
                     $this->redirect($this->getResource()::getUrl('index'));
                 }),
 
             Actions\DeleteAction::make(),
         ];
+    }
+
+    private function notify(string $string, string $string1)
+    {
     }
 }

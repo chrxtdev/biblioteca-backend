@@ -10,10 +10,9 @@ use Filament\Forms\Form;
 use Filament\Resources\Resource;
 use Filament\Tables;
 use Filament\Tables\Table;
-use Illuminate\Database\Eloquent\Builder;
-use Illuminate\Database\Eloquent\SoftDeletingScope;
 use Filament\Tables\Actions\Action;
 use Filament\Forms\Components\Textarea;
+
 
 class BookResource extends Resource
 {
@@ -53,9 +52,9 @@ class BookResource extends Resource
                     ->searchable()
                     ->preload(),
 
-                Forms\Components\Toggle::make('is_verified')
-                    ->label('Verificado pela Faculdade?')
-                    ->default(false),
+//                Forms\Components\Toggle::make('is_verified')
+//                    ->label('Verificado pela Faculdade?')
+//                    ->default(false),
 
                 Forms\Components\Select::make('course')
                     ->label('Curso Relacionado')
