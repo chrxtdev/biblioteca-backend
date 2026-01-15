@@ -10,23 +10,26 @@ class BookController extends Controller
     public function index(Request $request)
     {
         $search = $request->input('search');
+
         $books = Book::where('is_verified', true)
             ->when($search, function ($query, $search) {
-                return $query->where(function ($q) use ($search) {
+                return $query->where(function($q) use ($search) {
                     $q->where('title', 'like', "%{$search}%")
-                        ->orWhere('author', 'like', "%{$search}%");
+                      ->orWhere('author', 'like', "%{$search}%")
+                      ->orWhere('course', 'like', "%{$search}%");
                 });
             })
             ->orderBy('created_at', 'desc')
-            ->paginate(10);
+            ->get();
+
         $myBooks = $request->user()->books()
             ->orderBy('created_at', 'desc')
-            ->paginate(5, ['*'], 'my_page');
+            ->paginate(5, ['*'], 'my_page'); 
 
         return view('dashboard', [
-            'books' => $books,
-            'myBooks' => $myBooks,
-            'search' => $search
+            'books' => $books,     
+            'myBooks' => $myBooks, 
+            'search' => $search    
         ]);
     }
 
