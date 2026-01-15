@@ -3,6 +3,7 @@
 use App\Http\Controllers\ProfileController;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\BookController;
+use App\Http\Controllers\ReadingProgressController;
 use App\Models\Book;
 
 Route::get('/', function () {
@@ -26,4 +27,12 @@ Route::get('/livros', [BookController::class, 'index'])->name('books.index');
 Route::middleware(['auth'])->group(function () {
     Route::get('/enviar-livro', [BookController::class, 'create'])->name('books.create');
     Route::post('/livros', [BookController::class, 'store'])->name('books.store');
+});
+
+// Rotas API para progresso de leitura
+Route::middleware(['auth'])->group(function () {
+    Route::get('/api/reading-progress/{bookId}', [ReadingProgressController::class, 'show']);
+    Route::post('/api/reading-progress', [ReadingProgressController::class, 'update']);
+    Route::post('/api/reading-progress/complete', [ReadingProgressController::class, 'markAsCompleted']);
+    Route::get('/api/reading-progress', [ReadingProgressController::class, 'index']);
 });

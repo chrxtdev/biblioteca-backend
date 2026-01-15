@@ -39,6 +39,16 @@ class Book extends Model
         return $this->belongsTo(User::class);
     }
 
+    public function readingProgress()
+    {
+        return $this->hasMany(ReadingProgress::class);
+    }
+
+    public function getUserProgress($userId)
+    {
+        return $this->readingProgress()->where('user_id', $userId)->first();
+    }
+
     protected static function booted(): void
     {
         static::deleting(function (Book $book) {

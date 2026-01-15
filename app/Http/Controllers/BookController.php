@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Book;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
 
 class BookController extends Controller
 {
@@ -22,14 +23,25 @@ class BookController extends Controller
             ->orderBy('created_at', 'desc')
             ->get();
 
+        // Livros novos (últimos 7 dias)
+        $newBooks = Book::where('is_verified', true)
+            ->where('created_at', '>=', now()->subDays(7))
+            ->orderBy('created_at', 'desc')
+            ->get();
+
         $myBooks = $request->user()->books()
             ->orderBy('created_at', 'desc')
-            ->paginate(5, ['*'], 'my_page'); 
+            ->paginate(5, ['*'], 'my_page');
+
+        // Carregar progressos de leitura do usuário
+        $readingProgress = $request->user()->getCurrentReadingBooks();
 
         return view('dashboard', [
             'books' => $books,     
+            'newBooks' => $newBooks,
             'myBooks' => $myBooks, 
-            'search' => $search    
+            'search' => $search,
+            'readingProgress' => $readingProgress
         ]);
     }
 
@@ -68,7 +80,7 @@ class BookController extends Controller
             'course' => $request->course,
             'file_path' => $path,
             'cover_path' => $capaPath,
-            'user_id' => auth()->id(),
+            'user_id' => Auth::id(),
             'is_verified' => false,
         ]);
 

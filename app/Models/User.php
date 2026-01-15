@@ -63,4 +63,19 @@ class User extends Authenticatable implements FilamentUser
     {
         return $this->hasMany(Book::class);
     }
+
+    public function readingProgress(): HasMany
+    {
+        return $this->hasMany(ReadingProgress::class);
+    }
+
+    public function getCurrentReadingBooks()
+    {
+        return $this->readingProgress()
+            ->with('book')
+            ->where('is_completed', false)
+            ->orderBy('last_read_at', 'desc')
+            ->take(3)
+            ->get();
+    }
 }

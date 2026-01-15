@@ -30,7 +30,6 @@ class BookResource extends Resource
         ->schema([
             Forms\Components\Grid::make(3)
                 ->schema([
-                    // 👈 Coluna esquerda (2 colunas)
                     Forms\Components\Group::make()
                         ->columnSpan(2)
                         ->schema([
@@ -40,20 +39,23 @@ class BookResource extends Resource
                                 ->schema([
                                     Forms\Components\TextInput::make('title')
                                         ->label('Título')->required(),
-                                        
+
                                     Forms\Components\TextInput::make('author')
                                         ->label('Autor')->required(),
-                                        
+
                                     Forms\Components\Select::make('course')
                                         ->label('Curso / Categoria')
                                         ->options([
-                                            'Engenharia de Software' => 'Engenharia de Software',
+                                            'Engenharia Civil ' => 'Engenharia Civil ',
                                             'Direito' => 'Direito',
-                                            'Medicina' => 'Medicina',
+                                            'Enfermagem' => 'Enfermagem',
+                                            'Serviço Social' => 'Serviço Social',
+                                            'Psicologia' => 'Psicologia',
+                                            'Fisioterapia' => 'Fisioterapia',
                                             'Administração' => 'Administração',
                                             'Geral' => 'Geral',
                                         ])->required(),
-                                        
+
                                     Forms\Components\Textarea::make('description')
                                         ->label('Descrição')->columnSpanFull()->rows(3),
                                 ]),
@@ -72,14 +74,13 @@ class BookResource extends Resource
                                         ->label('Pré-visualização')
                                         ->content(fn ($record) => $record && $record->file_path
                                             ? new \Illuminate\Support\HtmlString('
-                                                <iframe src="' . asset('storage/' . $record->file_path) . '" 
+                                                <iframe src="' . asset('storage/' . $record->file_path) . '"
                                                     width="100%" height="600px" class="border rounded-lg shadow-sm">
                                                 </iframe>')
                                             : 'Nenhum PDF carregado.'),
                                 ]),
                         ]),
 
-                    // 👉 Coluna direita (1 coluna)
                     Forms\Components\Group::make()
                         ->columnSpan(1)
                         ->schema([
@@ -97,7 +98,7 @@ class BookResource extends Resource
                                         ->onColor('success')->offColor('danger'),
 
                                     Forms\Components\Textarea::make('rejection_reason')
-                                        ->label('Motivo da Recusa')
+                                        ->label('Motivo da Rejeição')
                                         ->visible(fn ($get) => $get('rejection_reason'))->disabled(),
 
                                     Forms\Components\Placeholder::make('created_at')
