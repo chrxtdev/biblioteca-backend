@@ -6,8 +6,9 @@ use App\Http\Controllers\BookController;
 use App\Models\Book;
 
 Route::get('/', function () {
-    return view('welcome');
+    return redirect()->route('dashboard');
 });
+
 Route::get('/dashboard', [BookController::class, 'index'])
     ->middleware(['auth', 'verified'])
     ->name('dashboard');
