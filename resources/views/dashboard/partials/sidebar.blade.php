@@ -16,20 +16,8 @@
                             d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6">
                         </path>
                     </svg>
-                    <span class="font-medium">Discover</span>
+                    <span class="font-medium">Ínicio</span>
                 </a>
-            </li>
-
-            <li>
-                <button @click="activeCategory = 'all'" 
-                        class="w-full flex items-center gap-3 text-gray-700 dark:text-gray-300 hover:text-indigo-600 dark:hover:text-indigo-400 hover:bg-gray-50 dark:hover:bg-gray-700 px-4 py-3 rounded-lg transition-all duration-200 text-left">
-                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                            d="M7 7h10M7 12h10m-7 5h10M3 7v10a1 1 0 001 1h16a1 1 0 001-1V7a1 1 0 00-1-1H4a1 1 0 00-1 1z">
-                        </path>
-                    </svg>
-                    <span class="font-medium">Category</span>
-                </button>
             </li>
 
             <li>
@@ -40,7 +28,7 @@
                             d="M5 8h14M5 8a2 2 0 110-4h14a2 2 0 110 4M5 8v10a2 2 0 002 2h10a2 2 0 002-2V8m-9 4h4">
                         </path>
                     </svg>
-                    <span class="font-medium">My Library</span>
+                    <span class="font-medium">Meus envios</span>
                     @if(isset($myBooks) && !$myBooks->isEmpty())
                         <span
                             class="ml-auto bg-indigo-100 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400 text-xs px-2 py-1 rounded-full font-bold">
@@ -49,19 +37,7 @@
                     @endif
                 </button>
             </li>
-
-            <li>
-                <a href="{{ route('aluno') }}"
-                    class="flex items-center gap-3 text-gray-700 dark:text-gray-300 hover:text-indigo-600 dark:hover:text-indigo-400 hover:bg-gray-50 dark:hover:bg-gray-700 px-4 py-3 rounded-lg transition-all duration-200">
-                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                            d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z">
-                        </path>
-                    </svg>
-                    <span class="font-medium">Download</span>
-                </a>
-            </li>
-
+            
             <li>
                 <a href="{{ route('aluno') }}"
                     class="flex items-center gap-3 text-gray-700 dark:text-gray-300 hover:text-indigo-600 dark:hover:text-indigo-400 hover:bg-gray-50 dark:hover:bg-gray-700 px-4 py-3 rounded-lg transition-all duration-200">
