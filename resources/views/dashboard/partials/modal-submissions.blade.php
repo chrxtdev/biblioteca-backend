@@ -1,5 +1,5 @@
 <!-- Modal Meus Envios -->
-<div x-show="showMySubmissions" 
+<div x-show="showSubmissions" 
      x-cloak
      class="fixed inset-0 z-50 overflow-y-auto"
      x-transition:enter="transition ease-out duration-300"
@@ -10,7 +10,7 @@
      x-transition:leave-end="opacity-0">
     
     <!-- Backdrop -->
-    <div class="fixed inset-0 bg-black bg-opacity-50" @click="showMySubmissions = false"></div>
+    <div class="fixed inset-0 bg-black bg-opacity-50" @click="showSubmissions = false"></div>
     
     <!-- Modal -->
     <div class="flex min-h-screen items-center justify-center p-4">
@@ -30,7 +30,7 @@
                     </svg>
                     Meus Envios
                 </h3>
-                <button @click="showMySubmissions = false" 
+                <button @click="showSubmissions = false" 
                         class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition">
                     <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
@@ -75,7 +75,7 @@
             
             <!-- Footer -->
             <div class="p-6 border-t border-gray-200 dark:border-gray-700">
-                <button @click="showMySubmissions = false" 
+                <button @click="showSubmissions = false" 
                         class="w-full bg-indigo-600 text-white px-4 py-2 rounded-lg font-medium hover:bg-indigo-700 transition">
                     Fechar
                 </button>

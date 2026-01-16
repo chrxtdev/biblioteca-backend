@@ -21,7 +21,7 @@
             </li>
 
             <li>
-                <button @click="showMySubmissions = true"
+                <button @click="showSubmissions = true"
                     class="w-full flex items-center gap-3 text-gray-700 dark:text-gray-300 hover:text-indigo-600 dark:hover:text-indigo-400 hover:bg-gray-50 dark:hover:bg-gray-700 px-4 py-3 rounded-lg transition-all duration-200 text-left">
                     <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
@@ -46,7 +46,7 @@
                             d="M15.536 8.464a5 5 0 010 7.072m2.828-9.464a5 5 0 00-7.072 2.828A5 5 0 0112 19.928V15a3 3 0 00-3-3m9-9a3 3 0 00-3 3v4.928">
                         </path>
                     </svg>
-                    <span class="font-medium">Favourite</span>
+                    <span class="font-medium">Favoritos</span>
                 </a>
             </li>
         </ul>
@@ -63,7 +63,7 @@
             </div>
             <div class="flex-1">
                 <p class="font-medium text-sm">{{ Auth::user()->name }}</p>
-                <p class="text-xs text-gray-500 dark:text-gray-400">Settings</p>
+                <p class="text-xs text-gray-500 dark:text-gray-400">Configurações</p>
             </div>
         </a>
 

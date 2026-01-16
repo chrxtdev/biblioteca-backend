@@ -7,7 +7,7 @@
                 <h2 class="text-2xl font-bold text-gray-800 dark:text-white">Olá, {{ Auth::user()->name }} 👋</h2>
                 <p class="text-gray-500 dark:text-gray-400">Explore o conhecimento disponível.</p>
             </div>
-            <form method="GET" action="{{ route('dashboard') }}" class="w-full md:w-1/3 relative">
+            <form method="GET" action="{{ route('aluno') }}" class="w-full md:w-1/3 relative">
                 <input type="text" name="search" value="{{ request('search') }}"
                     placeholder="Buscar livros, autores..."
                     class="w-full pl-10 pr-4 py-3 border-none rounded-xl shadow-sm bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-indigo-500 text-sm placeholder-gray-400">
@@ -95,7 +95,7 @@
                 <div class="flex overflow-x-auto pb-8 pt-2 gap-6 scrollbar-hide snap-x">
                     @foreach($courseBooks as $book)
                     <div class="snap-start flex-none w-[160px] md:w-[180px] group cursor-pointer"
-                        @click="openReader('{{ asset('storage/' . $book->file_path) }}', '{{ $book->title }}')">
+                        @click="openReader({{ $book }})"
 
                         <div class="relative w-full aspect-[2/3] bg-white dark:bg-gray-800 rounded-lg shadow-md hover:shadow-xl transition-all duration-300 transform group-hover:-translate-y-2 overflow-hidden border border-gray-200 dark:border-gray-700">
                             @if($book->cover_path)

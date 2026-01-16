@@ -81,7 +81,7 @@
             <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
                 @foreach($books as $book)
                     <div class="group cursor-pointer transform transition-all duration-300 hover:scale-105"
-                         @click="openReader('{{ asset('storage/' . $book->file_path) }}', '{{ $book->title }}', {{ $book->id }})">
+                         @click="openReader({{ $book }})">
                         
                         <div class="relative w-full aspect-[3/4] bg-white dark:bg-gray-800 rounded-lg shadow-sm hover:shadow-lg transition-all duration-300 overflow-hidden border border-gray-200 dark:border-gray-700">
                             @if($book->cover_path)
@@ -143,7 +143,7 @@
             <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
                 @foreach($newBooks as $book)
                     <div class="group cursor-pointer transform transition-all duration-300 hover:scale-105 relative"
-                         @click="openReader('{{ asset('storage/' . $book->file_path) }}', '{{ $book->title }}', {{ $book->id }})">
+                         @click="openReader({{ $book }})">
                         
                         <!-- Badge de Novo -->
                         <div class="absolute top-2 right-2 z-10 bg-red-500 text-white text-xs px-2 py-1 rounded-full font-medium">

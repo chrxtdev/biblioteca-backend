@@ -54,17 +54,15 @@
         }
     </style>
 
-    <div x-data="dashboardData" x-init="init()" :class="{ 'dark': darkMode }"
-        class="bg-gray-50 dark:bg-gray-900 min-h-screen font-sans transition-colors duration-300">
+    <div x-data="dashboard" x-init="init()" :class="{ 'dark': darkMode }"
+        class="bg-gray-50 dark:bg-gray-900 min-h-screen font-sans transition-colors duration-300 flex">
 
         <!-- Sidebar (Coluna Esquerda) -->
         @include('dashboard.partials.sidebar')
 
         <!-- Conteúdo Principal (Coluna Central) -->
-        <div class="flex-1 p-6 overflow-y-auto">
-            @include('dashboard.partials.search-bar')
-            @include('dashboard.partials.recommended-section')
-            @include('dashboard.partials.categories-section')
+        <div class="flex-1 overflow-y-auto">
+            @include('dashboard.partials.main-content')
         </div>
 
         <!-- Book Details Panel (Coluna Direita) -->
@@ -79,129 +77,59 @@
 </x-app-layout>
 
 <script>
-document.addEventListener('alpine:init', () => {
-    Alpine.data('dashboardData', () => ({
-        darkMode: localStorage.getItem('theme') === 'dark',
-        showReader: false,
-        showCreate: false,
-        showMySubmissions: false,
-        pdfUrl: '',
-        bookTitle: '',
-        currentBookId: null,
-        currentPage: 1,
-        totalPages: 0,
-        readingProgress: {},
-        activeTab: 'todos',
-        activeCategory: 'all',
-        selectedBook: null,
+        document.addEventListener('alpine:init', () => {
+            Alpine.data('dashboard', () => ({
+                darkMode: localStorage.getItem('theme') === 'dark',
+                showReader: false,
+                showCreate: false,
+                showSubmissions: false,
+                
+                // Variáveis do Leitor
+                pdfUrl: '',
+                selectedBook: null,
+                readingProgress: [],
+                currentPage: 1,
+                totalPages: 0,
+                activeTab: 'todos',
+                activeCategory: 'all',
 
-        toggleTheme() {
-            this.darkMode = !this.darkMode;
-            localStorage.setItem('theme', this.darkMode ? 'dark' : 'light');
-            if (this.darkMode) document.documentElement.classList.add('dark');
-            else document.documentElement.classList.remove('dark');
-        },
+                init() {
+                    if (this.darkMode) document.documentElement.classList.add('dark');
+                    this.readingProgress = []; 
+                },
 
-        init() {
-            if (this.darkMode) document.documentElement.classList.add('dark');
-        },
+                toggleTheme() {
+                    this.darkMode = !this.darkMode;
+                    localStorage.setItem('theme', this.darkMode ? 'dark' : 'light');
+                    if (this.darkMode) document.documentElement.classList.add('dark');
+                    else document.documentElement.classList.remove('dark');
+                },
 
-        openReader(url, title, bookId) {
-            this.pdfUrl = url;
-            this.bookTitle = title;
-            this.currentBookId = bookId;
-            this.showReader = true;
+                openReader(book) {
+                    console.log('Abrindo livro:', book.title);
+                    
+                    this.selectedBook = book;
+                    this.pdfUrl = '/storage/' + book.file_path;
+                    this.currentPage = 1;
+                    this.totalPages = 0;
+                    this.showReader = true;
+                },
 
-            // Set selected book for details panel
-            this.selectedBook = {
-                id: bookId,
-                title: title,
-                file: url,
-                cover: null, // Will be set based on actual book data
-                author: 'Unknown Author',
-                rating: '4.8',
-                pages: '320',
-                ratings: '643',
-                reviews: '110',
-                description: 'A comprehensive guide to modern practices and strategies.'
-            };
+                updateProgress(page, total) {
+                    this.currentPage = page;
+                    this.totalPages = total;
+                    console.log('Progresso atualizado:', page, 'de', total);
+                },
 
-            this.loadReadingProgress(bookId);
-        },
-
-        loadReadingProgress(bookId) {
-            fetch(`/api/reading-progress/${bookId}`)
-                .then(response => response.json())
-                .then(data => {
-                    if (data.progress) {
-                        this.readingProgress = data.progress;
-                        this.currentPage = data.progress.current_page;
-                        this.totalPages = data.progress.total_pages;
+                // Funções placeholders para não quebrar
+                saveProgress(page, total) { console.log('Salvando progresso...'); },
+                markAsCompleted() { console.log('Marcando completo...'); },
+                navigatePage(direction) { 
+                    const iframe = document.querySelector('#pdf-iframe');
+                    if (iframe && iframe.contentWindow) {
+                        iframe.contentWindow.postMessage({ type: direction === 'next' ? 'nextPage' : 'prevPage' }, '*');
                     }
-                })
-                .catch(error => console.log('Erro ao carregar progresso:', error));
-        },
-
-        updateProgress(page, total) {
-            this.currentPage = page;
-            this.totalPages = total;
-
-            if (this.currentBookId) {
-                fetch('/api/reading-progress', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
-                    },
-                    body: JSON.stringify({
-                        book_id: this.currentBookId,
-                        current_page: page,
-                        total_pages: total
-                    })
-                })
-                    .then(response => response.json())
-                    .then(data => {
-                        this.readingProgress = data.progress;
-                    })
-                    .catch(error => console.log('Erro ao salvar progresso:', error));
-            }
-        },
-
-        markAsCompleted() {
-            if (this.currentBookId) {
-                fetch('/api/reading-progress/complete', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
-                    },
-                    body: JSON.stringify({
-                        book_id: this.currentBookId
-                    })
-                })
-                    .then(response => response.json())
-                    .then(data => {
-                        this.readingProgress = data.progress;
-                        window.location.reload();
-                    })
-                    .catch(error => console.log('Erro ao marcar como concluído:', error));
-            }
-        },
-
-        navigatePage(direction) {
-            const iframe = document.getElementById('pdfViewer');
-            if (!iframe.contentWindow) return;
-
-            try {
-                if (direction === 'next') {
-                    iframe.contentWindow.postMessage({ type: 'nextPage' }, '*');
-                } else {
-                    iframe.contentWindow.postMessage({ type: 'prevPage' }, '*');
                 }
-            } catch (error) {
-                console.log('Erro ao navegar:', error);
-            }
-        }
-    }))
-})
-</script>
+            }));
+        });
+    </script>
