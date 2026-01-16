@@ -7,12 +7,12 @@ use App\Http\Controllers\ReadingProgressController;
 use App\Models\Book;
 
 Route::get('/', function () {
-    return redirect()->route('dashboard');
+    return redirect()->route('aluno');
 });
 
-Route::get('/dashboard', [BookController::class, 'index'])
+Route::get('/aluno', [BookController::class, 'index'])
     ->middleware(['auth', 'verified'])
-    ->name('dashboard');
+    ->name('aluno');
 
 Route::middleware('auth')->group(function () {
     Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');

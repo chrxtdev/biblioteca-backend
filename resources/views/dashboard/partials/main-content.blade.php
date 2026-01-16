@@ -3,16 +3,13 @@
     <!-- Header com Busca -->
     <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm p-6">
         <div class="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4">
-            <div class="flex items-center gap-4">
-                <img src="{{ asset('images/unicentroma-logo.png') }}" alt="Unicentro" class="h-12 w-auto object-contain">
-                <div>
-                    <h1 class="text-2xl font-bold text-gray-900 dark:text-white">Olá, {{ Auth::user()->name }}! 👋</h1>
-                    <p class="text-gray-500 dark:text-gray-400 mt-1">Explore nosso acervo de livros</p>
-                </div>
+            <div>
+                <h1 class="text-2xl font-bold text-gray-900 dark:text-white">Olá, {{ Auth::user()->name }}! 👋</h1>
+                <p class="text-gray-500 dark:text-gray-400 mt-1">Explore nosso acervo de livros</p>
             </div>
             
             <div class="flex gap-3 w-full lg:w-auto">
-                <form method="GET" action="{{ route('dashboard') }}" class="flex-1 lg:flex-initial">
+                <form method="GET" action="{{ route('aluno') }}" class="flex-1 lg:flex-initial">
                     <div class="relative">
                         <input type="text" name="search" value="{{ request('search') }}" 
                                placeholder="Buscar livros, autores..." 

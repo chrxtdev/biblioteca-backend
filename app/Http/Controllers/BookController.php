@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\Book;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Log;
 
 class BookController extends Controller
 {
@@ -12,12 +13,20 @@ class BookController extends Controller
     {
         $search = $request->input('search');
 
+        // Debug - verificar se há livros no banco
+        $allBooks = Book::all();
+        $verifiedBooks = Book::where('is_verified', true)->get();
+        
+        // Log para debug
+        Log::info('Total de livros no banco: ' . $allBooks->count());
+        Log::info('Livros verificados: ' . $verifiedBooks->count());
+
         $books = Book::where('is_verified', true)
             ->when($search, function ($query, $search) {
-                return $query->where(function($q) use ($search) {
+                return $query->where(function ($q) use ($search) {
                     $q->where('title', 'like', "%{$search}%")
-                      ->orWhere('author', 'like', "%{$search}%")
-                      ->orWhere('course', 'like', "%{$search}%");
+                        ->orWhere('author', 'like', "%{$search}%")
+                        ->orWhere('course', 'like', "%{$search}%");
                 });
             })
             ->orderBy('created_at', 'desc')
@@ -37,9 +46,9 @@ class BookController extends Controller
         $readingProgress = $request->user()->getCurrentReadingBooks();
 
         return view('dashboard', [
-            'books' => $books,     
+            'books' => $books,
             'newBooks' => $newBooks,
-            'myBooks' => $myBooks, 
+            'myBooks' => $myBooks,
             'search' => $search,
             'readingProgress' => $readingProgress
         ]);
@@ -84,6 +93,6 @@ class BookController extends Controller
             'is_verified' => false,
         ]);
 
-        return to_route('dashboard')->with('status', 'livro-enviado');
+        return to_route('aluno')->with('status', 'livro-enviado');
     }
 }
