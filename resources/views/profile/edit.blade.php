@@ -6,20 +6,20 @@
         [x-cloak] { display: none !important; }
     </style>
 
-    <div x-data="{ 
+    <div x-data="{
             darkMode: localStorage.getItem('theme') === 'dark',
-            
+
             toggleTheme() {
                 this.darkMode = !this.darkMode;
                 localStorage.setItem('theme', this.darkMode ? 'dark' : 'light');
                 if (this.darkMode) document.documentElement.classList.add('dark');
                 else document.documentElement.classList.remove('dark');
             },
-            
+
             init() {
                 if (this.darkMode) document.documentElement.classList.add('dark');
             }
-        }" 
+        }"
         x-init="init()"
         :class="{ 'dark': darkMode }"
         class="bg-gray-50 dark:bg-gray-900 min-h-screen font-sans transition-colors duration-300 flex">
@@ -99,27 +99,6 @@
                 </div>
             </div>
         </div>
-
-        <!-- Widgets (Coluna Direita) -->
-        @include('dashboard.partials.widgets')
     </div>
 </x-app-layout>
 
-<script>
-document.addEventListener('alpine:init', () => {
-    Alpine.data('profileData', () => ({
-        darkMode: localStorage.getItem('theme') === 'dark',
-        
-        toggleTheme() {
-            this.darkMode = !this.darkMode;
-            localStorage.setItem('theme', this.darkMode ? 'dark' : 'light');
-            if (this.darkMode) document.documentElement.classList.add('dark');
-            else document.documentElement.classList.remove('dark');
-        },
-        
-        init() {
-            if (this.darkMode) document.documentElement.classList.add('dark');
-        }
-    }))
-})
-</script>

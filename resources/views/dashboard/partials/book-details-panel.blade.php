@@ -1,5 +1,7 @@
 <!-- Painel de Estatísticas (Coluna Direita) -->
 <div class="w-80 bg-white dark:bg-gray-800 rounded-xl shadow-sm p-6 space-y-6">
+
+    @if(!request()->routeIs('favorites.index'))
     <!-- Estatísticas da Biblioteca -->
     <div>
         <h3 class="text-lg font-bold text-gray-900 dark:text-white mb-4">Estatísticas da Biblioteca</h3>
@@ -18,39 +20,36 @@
             </div>
         </div>
     </div>
+    @endif
 
     <!-- Categorias Populares -->
     <div>
         <h3 class="text-lg font-bold text-gray-900 dark:text-white mb-4">Categorias Populares</h3>
         <div class="space-y-2">
-            <div class="flex items-center justify-between p-2 hover:bg-gray-50 dark:hover:bg-gray-700 rounded-lg cursor-pointer transition-colors">
-                <div class="flex items-center gap-2">
-                    <div class="w-3 h-3 bg-blue-500 rounded-full"></div>
-                    <span class="text-sm text-gray-700 dark:text-gray-300">Engenharia Civil</span>
-                </div>
-                <span class="text-xs text-gray-500 dark:text-gray-400">45 livros</span>
-            </div>
-            <div class="flex items-center justify-between p-2 hover:bg-gray-50 dark:hover:bg-gray-700 rounded-lg cursor-pointer transition-colors">
-                <div class="flex items-center gap-2">
-                    <div class="w-3 h-3 bg-green-500 rounded-full"></div>
-                    <span class="text-sm text-gray-700 dark:text-gray-300">Direito</span>
-                </div>
-                <span class="text-xs text-gray-500 dark:text-gray-400">32 livros</span>
-            </div>
-            <div class="flex items-center justify-between p-2 hover:bg-gray-50 dark:hover:bg-gray-700 rounded-lg cursor-pointer transition-colors">
-                <div class="flex items-center gap-2">
-                    <div class="w-3 h-3 bg-purple-500 rounded-full"></div>
-                    <span class="text-sm text-gray-700 dark:text-gray-300">Administração</span>
-                </div>
-                <span class="text-xs text-gray-500 dark:text-gray-400">28 livros</span>
-            </div>
-            <div class="flex items-center justify-between p-2 hover:bg-gray-50 dark:hover:bg-gray-700 rounded-lg cursor-pointer transition-colors">
-                <div class="flex items-center gap-2">
-                    <div class="w-3 h-3 bg-yellow-500 rounded-full"></div>
-                    <span class="text-sm text-gray-700 dark:text-gray-300">Psicologia</span>
-                </div>
-                <span class="text-xs text-gray-500 dark:text-gray-400">19 livros</span>
-            </div>
+            <a href="{{ request()->routeIs('favorites.index') ? route('favorites.index', ['course' => 'Engenharia Civil']) : route('aluno', ['course' => 'Engenharia Civil']) }}" class="block p-2 hover:bg-gray-50 dark:hover:bg-gray-700 rounded-lg transition-colors">
+                <div class="flex items-center gap-2"><div class="w-3 h-3 bg-blue-500 rounded-full"></div><span class="text-sm text-gray-700 dark:text-gray-300">Engenharia Civil</span></div>
+            </a>
+            <a href="{{ request()->routeIs('favorites.index') ? route('favorites.index', ['course' => 'Direito']) : route('aluno', ['course' => 'Direito']) }}" class="block p-2 hover:bg-gray-50 dark:hover:bg-gray-700 rounded-lg transition-colors">
+                <div class="flex items-center gap-2"><div class="w-3 h-3 bg-green-500 rounded-full"></div><span class="text-sm text-gray-700 dark:text-gray-300">Direito</span></div>
+            </a>
+            <a href="{{ request()->routeIs('favorites.index') ? route('favorites.index', ['course' => 'Administração']) : route('aluno', ['course' => 'Administração']) }}" class="block p-2 hover:bg-gray-50 dark:hover:bg-gray-700 rounded-lg transition-colors">
+                <div class="flex items-center gap-2"><div class="w-3 h-3 bg-purple-500 rounded-full"></div><span class="text-sm text-gray-700 dark:text-gray-300">Administração</span></div>
+            </a>
+            <a href="{{ request()->routeIs('favorites.index') ? route('favorites.index', ['course' => 'Psicologia']) : route('aluno', ['course' => 'Psicologia']) }}" class="block p-2 hover:bg-gray-50 dark:hover:bg-gray-700 rounded-lg transition-colors">
+                <div class="flex items-center gap-2"><div class="w-3 h-3 bg-yellow-500 rounded-full"></div><span class="text-sm text-gray-700 dark:text-gray-300">Psicologia</span></div>
+            </a>
+            <a href="{{ request()->routeIs('favorites.index') ? route('favorites.index', ['course' => 'Serviço Social']) : route('aluno', ['course' => 'Serviço Social']) }}" class="block p-2 hover:bg-gray-50 dark:hover:bg-gray-700 rounded-lg transition-colors">
+                <div class="flex items-center gap-2"><div class="w-3 h-3 bg-pink-500 rounded-full"></div><span class="text-sm text-gray-700 dark:text-gray-300">Serviço Social</span></div>
+            </a>
+            <a href="{{ request()->routeIs('favorites.index') ? route('favorites.index', ['course' => 'Fisioterapia']) : route('aluno', ['course' => 'Fisioterapia']) }}" class="block p-2 hover:bg-gray-50 dark:hover:bg-gray-700 rounded-lg transition-colors">
+                <div class="flex items-center gap-2"><div class="w-3 h-3 bg-teal-500 rounded-full"></div><span class="text-sm text-gray-700 dark:text-gray-300">Fisioterapia</span></div>
+            </a>
+            <a href="{{ request()->routeIs('favorites.index') ? route('favorites.index', ['course' => 'Enfermagem']) : route('aluno', ['course' => 'Enfermagem']) }}" class="block p-2 hover:bg-gray-50 dark:hover:bg-gray-700 rounded-lg transition-colors">
+                <div class="flex items-center gap-2"><div class="w-3 h-3 bg-sky-500 rounded-full"></div><span class="text-sm text-gray-700 dark:text-gray-300">Enfermagem</span></div>
+            </a>
+            <a href="{{ request()->routeIs('favorites.index') ? route('favorites.index', ['course' => 'Outros']) : route('aluno', ['course' => 'Outros']) }}" class="block p-2 hover:bg-gray-50 dark:hover:bg-gray-700 rounded-lg transition-colors">
+                <div class="flex items-center gap-2"><div class="w-3 h-3 bg-gray-500 rounded-full"></div><span class="text-sm text-gray-700 dark:text-gray-300">Geral/Outros</span></div>
+            </a>
         </div>
     </div>
 </div>

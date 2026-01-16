@@ -6,51 +6,59 @@ use App\Models\Book;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Log;
+use Smalot\PdfParser\Parser;
 
 class BookController extends Controller
 {
     public function index(Request $request)
     {
+        $user = $request->user();
         $search = $request->input('search');
+        $course = $request->input('course');
 
-        // Debug - verificar se há livros no banco
-        $allBooks = Book::all();
-        $verifiedBooks = Book::where('is_verified', true)->get();
-        
-        // Log para debug
-        Log::info('Total de livros no banco: ' . $allBooks->count());
-        Log::info('Livros verificados: ' . $verifiedBooks->count());
+        $booksQuery = Book::where('is_verified', true);
 
-        $books = Book::where('is_verified', true)
-            ->when($search, function ($query, $search) {
-                return $query->where(function ($q) use ($search) {
-                    $q->where('title', 'like', "%{$search}%")
-                        ->orWhere('author', 'like', "%{$search}%")
-                        ->orWhere('course', 'like', "%{$search}%");
-                });
-            })
-            ->orderBy('created_at', 'desc')
-            ->get();
+        if ($search) {
+            $booksQuery->where(function ($query) use ($search) {
+                $query->where('title', 'like', "%{$search}%")
+                      ->orWhere('author', 'like', "%{$search}%");
+            });
+        }
 
-        // Livros novos (últimos 7 dias)
+        if ($course) {
+            if ($course === 'Outros') {
+                $mainCourses = ['Engenharia Civil', 'Direito', 'Administração', 'Psicologia', 'Serviço Social', 'Fisioterapia', 'Enfermagem'];
+                $booksQuery->whereNotIn('course', $mainCourses);
+            } else {
+                $booksQuery->where('course', $course);
+            }
+        }
+
+        $books = $booksQuery->orderBy('created_at', 'desc')->get();
+
         $newBooks = Book::where('is_verified', true)
             ->where('created_at', '>=', now()->subDays(7))
             ->orderBy('created_at', 'desc')
             ->get();
 
-        $myBooks = $request->user()->books()
+        $myBooks = $user->books()
             ->orderBy('created_at', 'desc')
             ->paginate(5, ['*'], 'my_page');
 
-        // Carregar progressos de leitura do usuário
-        $readingProgress = $request->user()->getCurrentReadingBooks();
+        // Carrega todos os progressos de leitura do usuário
+        $readingProgress = $user->readingProgress()->get();
+
+        // Carrega os IDs dos livros favoritados pelo usuário
+        $favoriteBookIds = $user->favoriteBooks()->pluck('books.id')->toArray();
 
         return view('dashboard', [
             'books' => $books,
             'newBooks' => $newBooks,
             'myBooks' => $myBooks,
             'search' => $search,
-            'readingProgress' => $readingProgress
+            'course' => $course,
+            'readingProgress' => $readingProgress,
+            'favoriteBookIds' => $favoriteBookIds,
         ]);
     }
 
@@ -61,7 +69,6 @@ class BookController extends Controller
 
     public function store(Request $request)
     {
-        // ... (seu código de validação e upload continua igual) ...
         $dadosValidados = $request->validate([
             'title' => 'required|string|max:255',
             'author' => 'required|string|max:255',
@@ -71,8 +78,17 @@ class BookController extends Controller
             'cover_path' => 'nullable|image|max:5120',
         ]);
 
+        $totalPages = 0;
         if ($request->hasFile('file_path')) {
             $path = $request->file('file_path')->store('livros_pdfs', 'public');
+
+            try {
+                $parser = new Parser();
+                $pdf = $parser->parseFile(storage_path('app/public/' . $path));
+                $totalPages = count($pdf->getPages());
+            } catch (\Exception $e) {
+                Log::error("Erro ao processar o PDF: " . $e->getMessage());
+            }
         } else {
             return back()->with('error', 'O arquivo é obrigatório');
         }
@@ -82,7 +98,7 @@ class BookController extends Controller
             $capaPath = $request->file('cover_path')->store('livros_capas', 'public');
         }
 
-        $book = Book::create([
+        Book::create([
             'title' => $request->title,
             'author' => $request->author,
             'description' => $request->description,
@@ -91,6 +107,7 @@ class BookController extends Controller
             'cover_path' => $capaPath,
             'user_id' => Auth::id(),
             'is_verified' => false,
+            'total_pages' => $totalPages,
         ]);
 
         return to_route('aluno')->with('status', 'livro-enviado');

@@ -3,27 +3,26 @@
 namespace Database\Seeders;
 
 use App\Models\User;
-use Illuminate\Database\Console\Seeds\WithoutModelEvents;
+use App\Models\Book;
+// use Illuminate\Database\Console\Seeds\WithoutModelEvents;
 use Illuminate\Database\Seeder;
 
 class DatabaseSeeder extends Seeder
 {
-    use WithoutModelEvents;
-
     /**
      * Seed the application's database.
      */
     public function run(): void
     {
-        // User::factory(10)->create();
+        // Cria um usuário administrador padrão para você poder logar
+        User::factory()->create([
+            'name' => 'Admin User',
+            'email' => 'admin@biblioteca.com',
+            'password' => bcrypt('password'), // A senha será "password"
+        ]);
 
-        User::firstOrCreate(
-            ['email' => 'test@example.com'],
-            [
-                'name' => 'Test User',
-                'password' => bcrypt('password'),
-                'email_verified_at' => now(),
-            ]
-        );
+        // Cria 50 livros falsos usando a BookFactory
+        // Cada livro também criará um novo usuário associado a ele
+        Book::factory(50)->create();
     }
 }

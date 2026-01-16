@@ -4,12 +4,12 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Support\Facades\Storage;
-
 
 class Book extends Model
 {
-    // ...
+    use HasFactory;
 
     protected $fillable = [
         'title',
@@ -21,6 +21,7 @@ class Book extends Model
         'is_verified',
         'user_id',
         'rejection_reason',
+        'total_pages',
     ];
 
     const COURSES = [
@@ -37,6 +38,11 @@ class Book extends Model
     public function user()
     {
         return $this->belongsTo(User::class);
+    }
+
+    public function favoritedBy(): BelongsToMany
+    {
+        return $this->belongsToMany(User::class, 'book_user_favorites', 'book_id', 'user_id');
     }
 
     public function readingProgress()
@@ -62,4 +68,3 @@ class Book extends Model
         });
     }
 }
-

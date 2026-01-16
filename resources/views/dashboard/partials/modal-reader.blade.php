@@ -1,100 +1,44 @@
-<div x-show="showReader" style="display: none;"
-     class="fixed inset-0 z-[60] flex items-center justify-center bg-black/95 backdrop-blur-sm p-0 md:p-4"
-     x-transition.opacity>
-    <div class="bg-gray-900 w-full h-full md:rounded-2xl shadow-2xl flex flex-col overflow-hidden relative" @click.away="showReader = false">
-        <!-- Header com informações e progresso -->
-        <div class="bg-gray-800 px-4 py-3 border-b border-gray-700">
-            <div class="flex justify-between items-center mb-2">
-                <div class="flex items-center gap-3">
-                    <div class="bg-indigo-500/20 text-indigo-300 p-2 rounded-lg">
-                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"></path></svg>
-                    </div>
-                    <div>
-                        <h3 class="text-white font-medium truncate max-w-[200px] md:max-w-md" x-text="selectedBook?.title || ''"></h3>
-                        <div class="flex items-center gap-2 text-xs text-gray-400">
-                            <span>Página <span x-text="currentPage"></span> de <span x-text="totalPages || '?'"></span></span>
-                            <span x-show="readingProgress.progress_percentage" class="text-indigo-400">
-                                (<span x-text="Math.round(readingProgress.progress_percentage || 0)"></span>%)
-                            </span>
-                        </div>
-                    </div>
-                </div>
-                <div class="flex items-center gap-2">
-                    <!-- Botão de concluir -->
-                    <button x-show="!readingProgress.is_completed && totalPages > 0" 
-                            @click="markAsCompleted()"
-                            class="bg-green-600 hover:bg-green-700 text-white px-3 py-1.5 rounded-lg text-sm font-medium transition flex items-center gap-1">
-                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
-                        </svg>
-                        Concluir
-                    </button>
-                    
-                    <!-- Badge de concluído -->
-                    <div x-show="readingProgress.is_completed" 
-                         class="bg-green-600 text-white px-3 py-1.5 rounded-lg text-sm font-medium flex items-center gap-1">
-                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
-                        </svg>
-                        Concluído
-                    </div>
-                    
-                    <button @click="showReader = false" class="text-gray-400 hover:text-white bg-gray-700 hover:bg-gray-600 p-2 rounded-full transition">
-                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
-                    </button>
-                </div>
+<!-- Modal Leitor de PDF -->
+<div x-show="showReader" x-transition:enter="transition ease-out duration-300" x-transition:enter-start="opacity-0"
+    x-transition:enter-end="opacity-100" x-transition:leave="transition ease-in duration-200"
+    x-transition:leave-start="opacity-100" x-transition:leave-end="opacity-0"
+    class="fixed inset-0 z-50 bg-black/70 backdrop-blur-sm flex items-center justify-center p-4" x-cloak>
+
+    <div @click.outside="showReader = false; pdfDoc = null;"
+        class="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl w-full max-w-4xl h-[95vh] flex flex-col">
+
+        <!-- Header do Modal -->
+        <header class="flex items-center justify-between p-4 border-b border-gray-200 dark:border-gray-700">
+            <div class="flex-1 min-w-0">
+                <h3 x-text="selectedBook ? selectedBook.title : 'Carregando...'" class="text-lg font-bold text-gray-900 dark:text-white truncate"></h3>
+                <p x-text="selectedBook ? selectedBook.author : ''" class="text-sm text-gray-500 dark:text-gray-400 truncate"></p>
             </div>
-            
-            <!-- Barra de progresso -->
-            <div x-show="totalPages > 0" class="w-full bg-gray-700 rounded-full h-2">
-                <div class="bg-indigo-500 h-2 rounded-full transition-all duration-300" 
-                     :style="`width: ${Math.round((currentPage / totalPages) * 100)}%`"></div>
-            </div>
-        </div>
-        
-        <!-- Área do PDF -->
-        <div class="flex-1 bg-gray-900 relative">
-            <iframe :src="pdfUrl" 
-                    @load="$el.contentWindow ? updateProgress(1, totalPages) : null"
-                    class="w-full h-full border-none"
-                    id="pdfViewer"></iframe>
-            
-            <!-- Loading -->
-            <div class="absolute inset-0 flex items-center justify-center pointer-events-none" x-show="!pdfUrl">
-                <div class="text-center">
-                    <div class="w-10 h-10 border-4 border-indigo-500 border-t-transparent rounded-full animate-spin mx-auto mb-3"></div>
-                    <p class="text-gray-400 text-sm">Carregando documento...</p>
-                </div>
-            </div>
-            
-            <!-- Controles de navegação -->
-            <div x-show="totalPages > 0" class="absolute bottom-4 left-1/2 transform -translate-x-1/2 bg-gray-800/90 backdrop-blur-sm rounded-lg px-4 py-2 flex items-center gap-3">
-                <button @click="navigatePage('prev')" 
-                        :disabled="currentPage <= 1"
-                        class="text-gray-400 hover:text-white disabled:opacity-50 disabled:cursor-not-allowed transition">
-                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path>
-                    </svg>
+            <div class="flex items-center gap-2 ml-4">
+                <!-- Controles de Navegação -->
+                <button @click="goToPrevPage()" :disabled="pageNum <= 1" class="p-2 rounded-full hover:bg-gray-100 dark:hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed">
+                    <svg class="w-5 h-5 text-gray-600 dark:text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path></svg>
                 </button>
-                
-                <div class="text-white text-sm font-medium">
-                    <input type="number" 
-                           x-model="currentPage" 
-                           @change="updateProgress(currentPage, totalPages)"
-                           min="1" 
-                           :max="totalPages"
-                           class="w-16 bg-gray-700 text-center rounded px-2 py-1 text-sm">
-                    / <span x-text="totalPages"></span>
+                <div class="text-sm font-medium text-gray-700 dark:text-gray-300">
+                    <span x-text="pageNum"></span> / <span x-text="pdfDoc ? pdfDoc.numPages : '...' "></span>
                 </div>
-                
-                <button @click="navigatePage('next')" 
-                        :disabled="currentPage >= totalPages"
-                        class="text-gray-400 hover:text-white disabled:opacity-50 disabled:cursor-not-allowed transition">
-                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path>
-                    </svg>
+                <button @click="goToNextPage()" :disabled="pageNum >= (pdfDoc ? pdfDoc.numPages : 0)" class="p-2 rounded-full hover:bg-gray-100 dark:hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed">
+                    <svg class="w-5 h-5 text-gray-600 dark:text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path></svg>
+                </button>
+                <button @click="showReader = false; pdfDoc = null;" class="p-2 rounded-full hover:bg-gray-100 dark:hover:bg-gray-700 ml-4">
+                    <svg class="w-6 h-6 text-gray-600 dark:text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
                 </button>
             </div>
+        </header>
+
+        <!-- Corpo do Modal (Canvas do PDF) -->
+        <div class="flex-1 overflow-auto p-4 bg-gray-100 dark:bg-gray-900/50 relative">
+            <div x-show="loading" class="absolute inset-0 flex items-center justify-center">
+                <svg class="animate-spin h-8 w-8 text-indigo-500" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                    <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                    <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                </svg>
+            </div>
+            <canvas id="pdf-canvas" x-show="!loading"></canvas>
         </div>
     </div>
 </div>
