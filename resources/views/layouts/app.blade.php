@@ -13,7 +13,7 @@
     <style> [x-cloak] { display: none !important; } </style>
 
     <!-- PDF.js -->
-    <script src="https://mozilla.github.io/pdf.js/build/pdf.mjs" type="module"></script>
+    <!-- PDF.js removed from here, moving to module import -->
 
     <script>
         // Evita o "flash" do modo claro/escuro (FOUC)
@@ -74,36 +74,49 @@
                 },
 
                 async loadPdf(url) {
-                    const { pdfjsLib } = globalThis;
-                    pdfjsLib.GlobalWorkerOptions.workerSrc = `https://mozilla.github.io/pdf.js/build/pdf.worker.mjs`;
-
                     try {
-                        const loadingTask = pdfjsLib.getDocument(url);
+                        // PDF.js já está carregado pelo app.js (window.pdfjsLib)
+                        if (!window.pdfjsLib) {
+                            alert("CRÍTICO: window.pdfjsLib não definido. O script não carregou.");
+                            console.error("PDF.js ainda não foi carregado.");
+                            return;
+                        }
+
+                        const loadingTask = window.pdfjsLib.getDocument(url);
                         this.pdfDoc = await loadingTask.promise;
                         this.renderPage(this.pageNum);
                     } catch (error) {
                         console.error("Erro ao carregar PDF:", error);
                         this.loading = false;
-                        // Opcional: mostrar uma mensagem de erro na UI
+
+                        alert(`Erro ao carregar PDF:\nURL: ${url}\n${error.name}: ${error.message}`);
                     }
                 },
 
-                renderPage(num) {
+                async renderPage(num) {
                     if (!this.pdfDoc) return;
                     this.loading = true;
-                    this.pdfDoc.getPage(num).then(page => {
+                    try {
+                        const page = await this.pdfDoc.getPage(num);
                         const canvas = document.getElementById('pdf-canvas');
+                        if (!canvas) {
+                             throw new Error("Canvas element not found");
+                        }
                         const ctx = canvas.getContext('2d');
                         const viewport = page.getViewport({ scale: 1.5 });
                         canvas.height = viewport.height;
                         canvas.width = viewport.width;
 
-                        page.render({ canvasContext: ctx, viewport: viewport }).promise.then(() => {
-                            this.loading = false;
-                            this.pageNum = num;
-                            this.updateProgress(num, this.pdfDoc.numPages);
-                        });
-                    });
+                        await page.render({ canvasContext: ctx, viewport: viewport }).promise;
+
+                        this.loading = false;
+                        this.pageNum = num;
+                        this.updateProgress(num, this.pdfDoc.numPages);
+                    } catch (error) {
+                        console.error("Erro na renderização (renderPage):", error);
+                        this.loading = false;
+                        alert(`Erro ao renderizar página ${num}:\n${error.name}: ${error.message}`);
+                    }
                 },
 
                 goToPrevPage() {
@@ -150,6 +163,9 @@
                 }
             }));
         });
+
+        // Start Alpine after registering listeners
+        Alpine.start();
     </script>
 </body>
 </html>

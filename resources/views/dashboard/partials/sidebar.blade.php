@@ -2,9 +2,9 @@
 <div :class="sidebarOpen ? 'w-64' : 'w-20'" class="bg-white dark:bg-gray-800 shadow-2xl flex flex-col h-screen sticky top-0 transition-all duration-300 ease-in-out z-30">
 
     <!-- 1. Seção do Logo (Topo) -->
-    <div class="flex items-center justify-center pt-6 pb-4 flex-shrink-0">
-        <a href="{{ route('aluno') }}" class="transition-all duration-300" :class="sidebarOpen ? 'h-12' : 'h-10'">
-            <img src="{{ asset('images/unicentroma-logo.png') }}" alt="Unicentro" class="h-full w-auto object-contain" x-cloak>
+    <div class="flex items-center justify-center pt-6 pb-4 flex-shrink-0 overflow-hidden">
+        <a href="{{ route('aluno') }}" class="transition-all duration-300 block h-12" :class="sidebarOpen ? 'h-12' : 'h-10'">
+            <img src="{{ asset('images/unicentroma-logo.png') }}" alt="Unicentro" class="h-full w-auto object-contain max-w-full" />
         </a>
     </div>
 
@@ -33,27 +33,39 @@
     </nav>
 
     <!-- 3. Seção de Ações (Rodapé) -->
-    <div class="flex-shrink-0 p-4 space-y-4 border-t border-gray-200 dark:border-gray-700">
-        <a href="{{ route('profile.edit') }}" title="Perfil" class="flex items-center gap-3" :class="{'justify-center': !sidebarOpen}">
+    <!-- 3. Seção de Ações (Rodapé) -->
+    <div class="flex-shrink-0 border-t border-gray-200 dark:border-gray-700 overflow-hidden transition-all duration-300 space-y-4" :class="sidebarOpen ? 'p-4' : 'p-2'">
+        
+        <!-- Perfil -->
+        <a href="{{ route('profile.edit') }}" title="Perfil" class="flex items-center gap-3 transition-all duration-300 block" :class="{'justify-center': !sidebarOpen}">
             <img class="w-9 h-9 rounded-full object-cover flex-shrink-0" src="https://ui-avatars.com/api/?name={{ urlencode(Auth::user()->name) }}&background=random&color=fff" alt="Avatar">
-            <div class="flex-1" x-show="sidebarOpen" x-cloak>
+            <div class="flex-1 overflow-hidden transition-all duration-300" 
+                 :class="sidebarOpen ? 'opacity-100 max-w-full' : 'opacity-0 max-w-0'">
                 <p class="font-semibold text-sm text-gray-800 dark:text-white truncate">{{ Auth::user()->name }}</p>
-                <p class="text-xs text-gray-500 dark:text-gray-400">Ver Perfil</p>
+                <p class="text-xs text-gray-500 dark:text-gray-400 whitespace-nowrap">Ver Perfil</p>
             </div>
         </a>
-        <div class="flex items-center gap-2">
-            <button @click="toggleTheme()" title="Mudar Tema" class="flex-1 flex items-center justify-center text-gray-500 hover:text-indigo-600 dark:text-gray-400 dark:hover:text-indigo-400 p-2 rounded-lg bg-gray-100 dark:bg-gray-700/50 transition-colors">
-                <svg x-show="!darkMode" class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z"></path></svg>
-                <svg x-show="darkMode" x-cloak class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z"></path></svg>
+
+        <!-- Botões de Ação -->
+        <div class="flex items-center gap-2 transition-all duration-300"
+             :class="sidebarOpen ? 'flex-row' : 'flex-col space-y-2'">
+            
+            <button @click="toggleTheme()" title="Mudar Tema" class="flex items-center justify-center text-gray-500 hover:text-indigo-600 dark:text-gray-400 dark:hover:text-indigo-400 p-2 rounded-lg bg-gray-100 dark:bg-gray-700/50 transition-colors"
+                    :class="sidebarOpen ? 'flex-1' : 'w-full'">
+                <svg x-show="!darkMode" class="w-5 h-5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z"></path></svg>
+                <svg x-show="darkMode" x-cloak class="w-5 h-5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z"></path></svg>
             </button>
-            <button @click="sidebarOpen = !sidebarOpen" title="Recolher/Expandir" class="flex-1 flex items-center justify-center text-gray-500 hover:text-indigo-600 dark:text-gray-400 dark:hover:text-indigo-400 p-2 rounded-lg bg-gray-100 dark:bg-gray-700/50 transition-colors">
-                <svg x-show="sidebarOpen" x-cloak class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 19l-7-7 7-7m8 14l-7-7 7-7"></path></svg>
-                <svg x-show="!sidebarOpen" x-cloak class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 5l7 7-7 7M5 5l7 7-7 7"></path></svg>
+
+            <button @click="sidebarOpen = !sidebarOpen" title="Recolher/Expandir" class="flex items-center justify-center text-gray-500 hover:text-indigo-600 dark:text-gray-400 dark:hover:text-indigo-400 p-2 rounded-lg bg-gray-100 dark:bg-gray-700/50 transition-colors"
+                    :class="sidebarOpen ? 'flex-1' : 'w-full'">
+                <svg x-show="sidebarOpen" x-cloak class="w-5 h-5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 19l-7-7 7-7m8 14l-7-7 7-7"></path></svg>
+                <svg x-show="!sidebarOpen" x-cloak class="w-5 h-5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 5l7 7-7 7M5 5l7 7-7 7"></path></svg>
             </button>
-            <form method="POST" action="{{ route('logout') }}" class="flex-1">
+
+            <form method="POST" action="{{ route('logout') }}" class="flex items-center justify-center" :class="sidebarOpen ? 'flex-1' : 'w-full'">
                 @csrf
                 <button type="submit" title="Sair" class="w-full flex items-center justify-center text-gray-500 hover:text-red-600 dark:text-gray-400 dark:hover:text-red-500 p-2 rounded-lg bg-gray-100 dark:bg-gray-700/50 transition-colors">
-                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H9m6 0v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h14a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v6z"></path></svg>
+                    <svg class="w-5 h-5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H9m6 0v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h14a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v6z"></path></svg>
                 </button>
             </form>
         </div>

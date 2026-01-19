@@ -12,6 +12,12 @@ use Filament\Tables;
 use Filament\Tables\Table;
 use Filament\Tables\Actions\Action;
 use Filament\Forms\Components\Textarea;
+use Filament\Forms\Components\Hidden;
+use Filament\Forms\Get;
+use Filament\Forms\Set;
+use Smalot\PdfParser\Parser;
+use Illuminate\Support\Facades\Storage;
+
 
 
 class BookResource extends Resource
@@ -68,14 +74,33 @@ class BookResource extends Resource
                                         ->label('Arquivo PDF')
                                         ->acceptedFileTypes(['application/pdf'])
                                         ->directory('livros_pdfs')
-                                        ->downloadable()->required(),
+                                        ->downloadable()
+                                        ->required()
+                                        ->live()
+                                        ->afterStateUpdated(function (Get $get, Set $set, ?string $state) {
+                                            if (!$state) return;
+                                            
+                                            try {
+                                                $path = Storage::disk('public')->path($state);
+                                                if (file_exists($path)) {
+                                                    $parser = new Parser();
+                                                    $pdf = $parser->parseFile($path);
+                                                    $pages = count($pdf->getPages());
+                                                    $set('total_pages', $pages);
+                                                }
+                                            } catch (\Exception $e) {
+                                                // Log error or ignore
+                                            }
+                                        }),
+
+                                    Forms\Components\Hidden::make('total_pages'),
 
                                     Forms\Components\Placeholder::make('pdf_viewer')
                                         ->label('Pré-visualização')
                                         ->content(fn ($record) => $record && $record->file_path
                                             ? new \Illuminate\Support\HtmlString('
                                                 <iframe src="' . asset('storage/' . $record->file_path) . '"
-                                                    width="100%" height="600px" class="border rounded-lg shadow-sm">
+                                                    width="100%" height="600px" style="border: none;">
                                                 </iframe>')
                                             : 'Nenhum PDF carregado.'),
                                 ]),
