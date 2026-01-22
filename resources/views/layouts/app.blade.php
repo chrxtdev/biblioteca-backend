@@ -12,8 +12,14 @@
     @vite(['resources/css/app.css', 'resources/js/app.js'])
     <style> [x-cloak] { display: none !important; } </style>
 
-    <!-- PDF.js -->
-    <!-- PDF.js removed from here, moving to module import -->
+    <!-- PDF.js via CDN - versão 2.16.105 estável -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.min.js"></script>
+    <script>
+        // Configurar o worker do PDF.js
+        pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.worker.min.js';
+        window.pdfjsLib = pdfjsLib;
+    </script>
+
 
     <script>
         // Evita o "flash" do modo claro/escuro (FOUC)
@@ -32,6 +38,12 @@
     </div>
 
     <script type="module">
+        // Estado do PDF fora do Alpine para evitar Proxy wrapping
+        window._pdfState = {
+            doc: null,
+            numPages: 0
+        };
+
         document.addEventListener('alpine:init', () => {
             Alpine.data('appState', () => ({
                 // Estado Geral da UI
@@ -43,11 +55,14 @@
                 activeTab: 'todos',
                 saveTimeout: null,
 
-                // Estado do Leitor de PDF
+                // Estado do Leitor de PDF (sem o pdfDoc que fica em window._pdfState)
                 selectedBook: null,
-                pdfDoc: null,
                 pageNum: 1,
+                totalPages: 0,
+                pdfScale: 1.2,
                 loading: false,
+                pdfError: null,
+                progressSaved: false,
 
                 init() {
                     this.sidebarOpen = window.innerWidth > 1024;
@@ -60,8 +75,13 @@
                     this.selectedBook = book;
                     this.showReader = true;
                     this.loading = true;
-                    this.pdfDoc = null;
+                    window._pdfState.doc = null;
+                    window._pdfState.numPages = 0;
                     this.pageNum = 1;
+                    this.totalPages = 0;
+                    this.pdfScale = 1.2;
+                    this.pdfError = null;
+                    this.progressSaved = false;
 
                     try {
                         const progress = await fetch(`/api/reading-progress/${book.id}`).then(res => res.json());
@@ -73,37 +93,67 @@
                     this.loadPdf(`/storage/${book.file_path}`);
                 },
 
+                async closeReader() {
+                    // Salva progresso antes de fechar
+                    if (window._pdfState.doc && this.selectedBook) {
+                        await this.saveProgressNow(this.pageNum, this.totalPages);
+                    }
+                    this.showReader = false;
+                    window._pdfState.doc = null;
+                    window._pdfState.numPages = 0;
+                    this.totalPages = 0;
+                    this.selectedBook = null;
+                    this.pdfError = null;
+                },
+
                 async loadPdf(url) {
                     try {
-                        // PDF.js já está carregado pelo app.js (window.pdfjsLib)
+                        this.pdfError = null;
+                        
                         if (!window.pdfjsLib) {
-                            alert("CRÍTICO: window.pdfjsLib não definido. O script não carregou.");
-                            console.error("PDF.js ainda não foi carregado.");
-                            return;
+                            throw new Error("PDF.js não está disponível. Recarregue a página.");
                         }
 
                         const loadingTask = window.pdfjsLib.getDocument(url);
-                        this.pdfDoc = await loadingTask.promise;
+                        const pdfDoc = await loadingTask.promise;
+                        
+                        // Armazena fora do Alpine para evitar Proxy
+                        window._pdfState.doc = pdfDoc;
+                        window._pdfState.numPages = pdfDoc.numPages;
+                        this.totalPages = pdfDoc.numPages;
+                        
                         this.renderPage(this.pageNum);
                     } catch (error) {
                         console.error("Erro ao carregar PDF:", error);
                         this.loading = false;
+                        this.pdfError = error.message || "Não foi possível carregar o PDF.";
+                    }
+                },
 
-                        alert(`Erro ao carregar PDF:\nURL: ${url}\n${error.name}: ${error.message}`);
+                retryLoadPdf() {
+                    if (this.selectedBook) {
+                        this.loading = true;
+                        this.pdfError = null;
+                        this.loadPdf(`/storage/${this.selectedBook.file_path}`);
                     }
                 },
 
                 async renderPage(num) {
-                    if (!this.pdfDoc) return;
+                    const pdfDoc = window._pdfState.doc;
+                    if (!pdfDoc) return;
+                    
+                    // Validar número da página
+                    num = Math.max(1, Math.min(num, pdfDoc.numPages));
+                    
                     this.loading = true;
                     try {
-                        const page = await this.pdfDoc.getPage(num);
+                        const page = await pdfDoc.getPage(num);
                         const canvas = document.getElementById('pdf-canvas');
                         if (!canvas) {
-                             throw new Error("Canvas element not found");
+                            throw new Error("Canvas não encontrado");
                         }
                         const ctx = canvas.getContext('2d');
-                        const viewport = page.getViewport({ scale: 1.5 });
+                        const viewport = page.getViewport({ scale: this.pdfScale });
                         canvas.height = viewport.height;
                         canvas.width = viewport.width;
 
@@ -111,12 +161,19 @@
 
                         this.loading = false;
                         this.pageNum = num;
-                        this.updateProgress(num, this.pdfDoc.numPages);
+                        this.updateProgress(num, pdfDoc.numPages);
                     } catch (error) {
-                        console.error("Erro na renderização (renderPage):", error);
+                        console.error("Erro na renderização:", error);
                         this.loading = false;
-                        alert(`Erro ao renderizar página ${num}:\n${error.name}: ${error.message}`);
+                        this.pdfError = `Erro ao renderizar página ${num}: ${error.message}`;
                     }
+                },
+
+                goToPage(num) {
+                    num = parseInt(num);
+                    if (isNaN(num) || !window._pdfState.doc) return;
+                    num = Math.max(1, Math.min(num, window._pdfState.numPages));
+                    this.renderPage(num);
                 },
 
                 goToPrevPage() {
@@ -125,16 +182,29 @@
                 },
 
                 goToNextPage() {
-                    if (this.pageNum >= this.pdfDoc.numPages) return;
+                    if (!window._pdfState.doc || this.pageNum >= this.totalPages) return;
                     this.renderPage(this.pageNum + 1);
+                },
+
+                zoomIn() {
+                    if (this.pdfScale >= 3) return;
+                    this.pdfScale = Math.min(3, this.pdfScale + 0.2);
+                    this.renderPage(this.pageNum);
+                },
+
+                zoomOut() {
+                    if (this.pdfScale <= 0.5) return;
+                    this.pdfScale = Math.max(0.5, this.pdfScale - 0.2);
+                    this.renderPage(this.pageNum);
                 },
 
                 updateProgress(page, total) {
                     clearTimeout(this.saveTimeout);
-                    this.saveTimeout = setTimeout(() => this.saveProgress(page, total), 3000);
+                    this.progressSaved = false;
+                    this.saveTimeout = setTimeout(() => this.saveProgressNow(page, total), 2000);
                 },
 
-                async saveProgress(page, total) {
+                async saveProgressNow(page, total) {
                     if (!this.selectedBook) return;
                     try {
                         await fetch('/api/reading-progress', {
@@ -142,6 +212,8 @@
                             headers: { 'Content-Type': 'application/json', 'X-CSRF-TOKEN': '{{ csrf_token() }}' },
                             body: JSON.stringify({ book_id: this.selectedBook.id, current_page: page, total_pages: total })
                         });
+                        this.progressSaved = true;
+                        setTimeout(() => { this.progressSaved = false; }, 3000);
                     } catch (e) { console.error('Erro ao salvar progresso:', e); }
                 },
 
