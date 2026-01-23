@@ -1,5 +1,15 @@
 <x-app-layout>
-    <div class="flex bg-gray-50 dark:bg-gray-900">
+    @section('title')
+        @if(request()->routeIs('favorites.index'))
+            Favoritos - Biblioteca Digital
+        @elseif(request()->routeIs('profile.edit'))
+             Perfil -Biblioteca Digital 
+        @else
+            Início - Biblioteca Digital
+        @endif
+    @endsection
+
+    <div class="flex bg-gray-50 dark:bg-gray-900 min-h-screen">
 
         <!-- Sidebar -->
         @include('dashboard.partials.sidebar')
@@ -15,6 +25,7 @@
             @else
                 @include('dashboard.partials.main-content', [
                     'books' => $books,
+                    'booksByCourse' => $booksByCourse ?? collect(),
                     'newBooks' => $newBooks,
                     'myBooks' => $myBooks,
                     'search' => $search,
@@ -24,10 +35,12 @@
                 ])
             @endif
         </div>
-
-        <!-- Coluna Direita -->
-        @if(!request()->routeIs('profile.edit'))
-            @include('dashboard.partials.book-details-panel')
+        
+        <!-- Coluna Direita (Sticky) -->
+        @if(!request()->routeIs('profile.edit') && !request()->routeIs('favorites.index'))
+            <div class="hidden lg:block w-80 flex-shrink-0 sticky top-0 self-start h-screen overflow-y-auto overflow-x-hidden py-6 pr-6">
+                @include('dashboard.partials.book-details-panel')
+            </div>
         @endif
 
         <!-- Modais -->

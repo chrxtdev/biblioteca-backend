@@ -1,9 +1,9 @@
 <!-- Sidebar (Reescrita do Zero) -->
-<div :class="sidebarOpen ? 'w-64' : 'w-20'" class="bg-white dark:bg-gray-800 shadow-2xl flex flex-col h-screen sticky top-0 transition-all duration-300 ease-in-out z-30">
+<div :class="{ 'w-64': sidebarOpen, 'w-20': !sidebarOpen, 'transition-all duration-300 ease-in-out': isLoaded }" class="w-64 bg-white dark:bg-gray-800 shadow-2xl flex flex-col h-screen sticky top-0 z-30">
 
     <!-- 1. Seção do Logo (Topo) -->
     <div class="flex items-center justify-center pt-6 pb-4 flex-shrink-0 overflow-hidden">
-        <a href="{{ route('aluno') }}" class="transition-all duration-300 block h-12" :class="sidebarOpen ? 'h-12' : 'h-10'">
+        <a href="{{ route('aluno') }}" class="block h-12" :class="{ 'h-12': sidebarOpen, 'h-10': !sidebarOpen, 'transition-all duration-300': isLoaded }">
             <img src="{{ asset('images/unicentroma-logo.png') }}" alt="Unicentro" class="h-full w-auto object-contain max-w-full" />
         </a>
     </div>
@@ -34,21 +34,21 @@
 
     <!-- 3. Seção de Ações (Rodapé) -->
     <!-- 3. Seção de Ações (Rodapé) -->
-    <div class="flex-shrink-0 border-t border-gray-200 dark:border-gray-700 overflow-hidden transition-all duration-300 space-y-4" :class="sidebarOpen ? 'p-4' : 'p-2'">
+    <div class="flex-shrink-0 border-t border-gray-200 dark:border-gray-700 overflow-hidden space-y-4" :class="{ 'p-4': sidebarOpen, 'p-2': !sidebarOpen, 'transition-all duration-300': isLoaded }">
         
         <!-- Perfil -->
-        <a href="{{ route('profile.edit') }}" title="Perfil" class="flex items-center gap-3 transition-all duration-300 block" :class="{'justify-center': !sidebarOpen}">
+        <a href="{{ route('profile.edit') }}" title="Perfil" class="flex items-center gap-3 block" :class="{ 'justify-center': !sidebarOpen, 'transition-all duration-300': isLoaded }">
             <img class="w-9 h-9 rounded-full object-cover flex-shrink-0" src="https://ui-avatars.com/api/?name={{ urlencode(Auth::user()->name) }}&background=random&color=fff" alt="Avatar">
-            <div class="flex-1 overflow-hidden transition-all duration-300" 
-                 :class="sidebarOpen ? 'opacity-100 max-w-full' : 'opacity-0 max-w-0'">
+            <div class="flex-1 overflow-hidden" 
+                 :class="{ 'opacity-100 max-w-full': sidebarOpen, 'opacity-0 max-w-0': !sidebarOpen, 'transition-all duration-300': isLoaded }">
                 <p class="font-semibold text-sm text-gray-800 dark:text-white truncate">{{ Auth::user()->name }}</p>
                 <p class="text-xs text-gray-500 dark:text-gray-400 whitespace-nowrap">Ver Perfil</p>
             </div>
         </a>
 
         <!-- Botões de Ação -->
-        <div class="flex items-center gap-2 transition-all duration-300"
-             :class="sidebarOpen ? 'flex-row' : 'flex-col space-y-2'">
+        <div class="flex items-center gap-2"
+             :class="{ 'flex-row': sidebarOpen, 'flex-col space-y-2': !sidebarOpen, 'transition-all duration-300': isLoaded }">
             
             <button @click="toggleTheme()" title="Mudar Tema" class="flex items-center justify-center text-gray-500 hover:text-indigo-600 dark:text-gray-400 dark:hover:text-indigo-400 p-2 rounded-lg bg-gray-100 dark:bg-gray-700/50 transition-colors"
                     :class="sidebarOpen ? 'flex-1' : 'w-full'">

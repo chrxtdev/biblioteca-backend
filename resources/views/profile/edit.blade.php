@@ -1,4 +1,5 @@
 <x-app-layout>
+    @section('title', 'Perfil - Biblioteca Digital')
     <style>
         nav[x-data] { display: none !important; }
         .scrollbar-hide::-webkit-scrollbar { display: none; }

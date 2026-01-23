@@ -4,7 +4,7 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="csrf-token" content="{{ csrf_token() }}">
-    <title>{{ config('app.name', 'Laravel') }}</title>
+    <title>@yield('title', config('app.name', 'Laravel'))</title>
 
     <!-- Fonts & Styles -->
     <link rel="preconnect" href="https://fonts.bunny.net">
@@ -41,35 +41,60 @@
         // Estado do PDF fora do Alpine para evitar Proxy wrapping
         window._pdfState = {
             doc: null,
-            numPages: 0
+            numPages: 0,
+            renderedPages: []
         };
 
         document.addEventListener('alpine:init', () => {
             Alpine.data('appState', () => ({
                 // Estado Geral da UI
+                isLoaded: false,
                 darkMode: localStorage.getItem('color-theme') === 'dark',
-                sidebarOpen: true,
+                sidebarOpen: localStorage.getItem('sidebarOpen') !== null ? localStorage.getItem('sidebarOpen') === 'true' : window.innerWidth > 1024,
                 showReader: false,
                 showCreate: false,
                 showSubmissions: false,
                 activeTab: 'todos',
                 saveTimeout: null,
+                newsSeen: false,
 
-                // Estado do Leitor de PDF (sem o pdfDoc que fica em window._pdfState)
+                // Estado do Leitor de PDF
                 selectedBook: null,
                 pageNum: 1,
                 totalPages: 0,
-                pdfScale: 1.2,
+                pdfScale: 1.0,
                 loading: false,
                 pdfError: null,
                 progressSaved: false,
+                viewMode: 'single', // 'single', 'double', 'scroll'
+                isFullscreen: false,
 
                 init() {
-                    this.sidebarOpen = window.innerWidth > 1024;
+                    // Evita animações na carga inicial
+                    setTimeout(() => this.isLoaded = true, 100);
+
+                    // Watchers para persistência
                     this.$watch('darkMode', val => localStorage.setItem('color-theme', val ? 'dark' : 'light'));
+                    this.$watch('sidebarOpen', val => localStorage.setItem('sidebarOpen', val));
+                    
+                    // Listener para ESC sair do fullscreen
+                    document.addEventListener('fullscreenchange', () => {
+                        this.isFullscreen = !!document.fullscreenElement;
+                    });
                 },
 
                 toggleTheme() { this.darkMode = !this.darkMode; },
+
+                async markNewsSeen() {
+                    if (this.newsSeen) return;
+                    this.newsSeen = true;
+                    try {
+                        await fetch('/api/mark-news-seen', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json', 'X-CSRF-TOKEN': '{{ csrf_token() }}' }
+                        });
+                    } catch (e) { console.error('Erro ao marcar como visto:', e); }
+                },
 
                 async openReader(book) {
                     this.selectedBook = book;
@@ -77,11 +102,14 @@
                     this.loading = true;
                     window._pdfState.doc = null;
                     window._pdfState.numPages = 0;
+                    window._pdfState.renderedPages = [];
                     this.pageNum = 1;
                     this.totalPages = 0;
-                    this.pdfScale = 1.2;
+                    this.pdfScale = 1.0;
                     this.pdfError = null;
                     this.progressSaved = false;
+                    this.viewMode = 'single';
+                    this.isFullscreen = false;
 
                     try {
                         const progress = await fetch(`/api/reading-progress/${book.id}`).then(res => res.json());
@@ -98,9 +126,16 @@
                     if (window._pdfState.doc && this.selectedBook) {
                         await this.saveProgressNow(this.pageNum, this.totalPages);
                     }
+                    
+                    // Sair do fullscreen se estiver
+                    if (document.fullscreenElement) {
+                        document.exitFullscreen();
+                    }
+                    
                     this.showReader = false;
                     window._pdfState.doc = null;
                     window._pdfState.numPages = 0;
+                    window._pdfState.renderedPages = [];
                     this.totalPages = 0;
                     this.selectedBook = null;
                     this.pdfError = null;
@@ -122,7 +157,11 @@
                         window._pdfState.numPages = pdfDoc.numPages;
                         this.totalPages = pdfDoc.numPages;
                         
-                        this.renderPage(this.pageNum);
+                        if (this.viewMode === 'scroll') {
+                            this.renderAllPages();
+                        } else {
+                            this.renderPage(this.pageNum);
+                        }
                     } catch (error) {
                         console.error("Erro ao carregar PDF:", error);
                         this.loading = false;
@@ -147,6 +186,7 @@
                     
                     this.loading = true;
                     try {
+                        // Renderiza página principal
                         const page = await pdfDoc.getPage(num);
                         const canvas = document.getElementById('pdf-canvas');
                         if (!canvas) {
@@ -159,8 +199,26 @@
 
                         await page.render({ canvasContext: ctx, viewport: viewport }).promise;
 
+                        // Se modo duplo, renderiza segunda página
+                        if (this.viewMode === 'double' && num + 1 <= pdfDoc.numPages) {
+                            const page2 = await pdfDoc.getPage(num + 1);
+                            const canvas2 = document.getElementById('pdf-canvas-2');
+                            if (canvas2) {
+                                const ctx2 = canvas2.getContext('2d');
+                                const viewport2 = page2.getViewport({ scale: this.pdfScale });
+                                canvas2.height = viewport2.height;
+                                canvas2.width = viewport2.width;
+                                await page2.render({ canvasContext: ctx2, viewport: viewport2 }).promise;
+                            }
+                        }
+
                         this.loading = false;
                         this.pageNum = num;
+                        
+                        // Scroll para o topo do container
+                        const container = document.getElementById('pdf-container');
+                        if (container) container.scrollTop = 0;
+                        
                         this.updateProgress(num, pdfDoc.numPages);
                     } catch (error) {
                         console.error("Erro na renderização:", error);
@@ -169,33 +227,124 @@
                     }
                 },
 
+                async renderAllPages() {
+                    const pdfDoc = window._pdfState.doc;
+                    if (!pdfDoc) return;
+                    
+                    this.loading = true;
+                    const container = document.getElementById('pdf-scroll-container');
+                    if (!container) return;
+                    
+                    container.innerHTML = '';
+                    window._pdfState.renderedPages = [];
+
+                    try {
+                        for (let i = 1; i <= pdfDoc.numPages; i++) {
+                            const page = await pdfDoc.getPage(i);
+                            const canvas = document.createElement('canvas');
+                            canvas.id = `pdf-page-${i}`;
+                            canvas.className = 'shadow-2xl rounded-lg bg-white';
+                            canvas.dataset.page = i;
+                            
+                            const ctx = canvas.getContext('2d');
+                            const viewport = page.getViewport({ scale: this.pdfScale });
+                            canvas.height = viewport.height;
+                            canvas.width = viewport.width;
+
+                            await page.render({ canvasContext: ctx, viewport: viewport }).promise;
+                            
+                            container.appendChild(canvas);
+                            window._pdfState.renderedPages.push(canvas);
+                        }
+                        this.loading = false;
+                    } catch (error) {
+                        console.error("Erro ao renderizar todas as páginas:", error);
+                        this.loading = false;
+                        this.pdfError = error.message;
+                    }
+                },
+
+                handlePdfScroll(event) {
+                    if (this.viewMode !== 'scroll') return;
+                    
+                    const container = event.target;
+                    const canvases = container.querySelectorAll('canvas[data-page]');
+                    
+                    for (const canvas of canvases) {
+                        const rect = canvas.getBoundingClientRect();
+                        const containerRect = container.getBoundingClientRect();
+                        
+                        // Se a página está visível (pelo menos 50% dela)
+                        if (rect.top < containerRect.bottom && rect.bottom > containerRect.top + containerRect.height / 2) {
+                            const newPage = parseInt(canvas.dataset.page);
+                            if (newPage !== this.pageNum) {
+                                this.pageNum = newPage;
+                                this.updateProgress(newPage, this.totalPages);
+                            }
+                            break;
+                        }
+                    }
+                },
+
                 goToPage(num) {
                     num = parseInt(num);
                     if (isNaN(num) || !window._pdfState.doc) return;
                     num = Math.max(1, Math.min(num, window._pdfState.numPages));
-                    this.renderPage(num);
+                    
+                    if (this.viewMode === 'scroll') {
+                        // Scroll até a página
+                        const canvas = document.getElementById(`pdf-page-${num}`);
+                        if (canvas) {
+                            canvas.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                        }
+                    } else {
+                        this.renderPage(num);
+                    }
                 },
 
                 goToPrevPage() {
                     if (this.pageNum <= 1) return;
-                    this.renderPage(this.pageNum - 1);
+                    const step = this.viewMode === 'double' ? 2 : 1;
+                    this.renderPage(Math.max(1, this.pageNum - step));
                 },
 
                 goToNextPage() {
                     if (!window._pdfState.doc || this.pageNum >= this.totalPages) return;
-                    this.renderPage(this.pageNum + 1);
+                    const step = this.viewMode === 'double' ? 2 : 1;
+                    this.renderPage(Math.min(this.totalPages, this.pageNum + step));
                 },
 
                 zoomIn() {
                     if (this.pdfScale >= 3) return;
                     this.pdfScale = Math.min(3, this.pdfScale + 0.2);
-                    this.renderPage(this.pageNum);
+                    if (this.viewMode === 'scroll') {
+                        this.renderAllPages();
+                    } else {
+                        this.renderPage(this.pageNum);
+                    }
                 },
 
                 zoomOut() {
                     if (this.pdfScale <= 0.5) return;
                     this.pdfScale = Math.max(0.5, this.pdfScale - 0.2);
-                    this.renderPage(this.pageNum);
+                    if (this.viewMode === 'scroll') {
+                        this.renderAllPages();
+                    } else {
+                        this.renderPage(this.pageNum);
+                    }
+                },
+
+                toggleFullscreen() {
+                    const container = document.getElementById('pdf-reader-container');
+                    if (!container) return;
+                    
+                    if (!document.fullscreenElement) {
+                        container.requestFullscreen().catch(err => {
+                            console.error('Erro ao entrar em fullscreen:', err);
+                        });
+                    } else {
+                        document.exitFullscreen();
+                    }
                 },
 
                 updateProgress(page, total) {
@@ -234,6 +383,20 @@
                     return currentState;
                 }
             }));
+        });
+
+        // Watch viewMode changes
+        document.addEventListener('alpine:initialized', () => {
+            Alpine.effect(() => {
+                const appState = Alpine.$data(document.documentElement);
+                if (appState && appState.viewMode && window._pdfState.doc) {
+                    if (appState.viewMode === 'scroll') {
+                        setTimeout(() => appState.renderAllPages(), 100);
+                    } else {
+                        setTimeout(() => appState.renderPage(appState.pageNum), 100);
+                    }
+                }
+            });
         });
 
         // Start Alpine after registering listeners

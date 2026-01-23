@@ -2,6 +2,11 @@
 
 namespace App\Providers\Filament;
 
+use App\Filament\Widgets\WelcomeWidget;
+use App\Filament\Widgets\StatsOverview;
+use App\Filament\Widgets\BooksChartWidget;
+use App\Filament\Widgets\CourseStatsWidget;
+use App\Filament\Widgets\LatestBooksWidget;
 use Filament\Http\Middleware\Authenticate;
 use Filament\Http\Middleware\AuthenticateSession;
 use Filament\Http\Middleware\DisableBladeIconComponents;
@@ -10,7 +15,6 @@ use Filament\Pages;
 use Filament\Panel;
 use Filament\PanelProvider;
 use Filament\Support\Colors\Color;
-use Filament\Widgets;
 use Illuminate\Cookie\Middleware\AddQueuedCookiesToResponse;
 use Illuminate\Cookie\Middleware\EncryptCookies;
 use Illuminate\Foundation\Http\Middleware\VerifyCsrfToken;
@@ -30,20 +34,32 @@ class AdminPanelProvider extends PanelProvider
 
             ->brandName('Biblioteca Digital')
             ->brandLogo(asset('images/unicentroma-logo.png'))
+            ->darkModeBrandLogo(asset('images/unicentroma-logo.png'))
             ->brandLogoHeight('3rem')
 
             ->colors([
-                'primary' => Color::Amber,
+                'primary' => Color::Teal,
+                'danger' => Color::Rose,
+                'success' => Color::Emerald,
+                'warning' => Color::Amber,
+                'info' => Color::Sky,
             ])
+            
+            ->darkMode(true)
+            ->sidebarCollapsibleOnDesktop()
+            ->sidebarFullyCollapsibleOnDesktop()
+            
             ->discoverResources(in: app_path('Filament/Resources'), for: 'App\\Filament\\Resources')
             ->discoverPages(in: app_path('Filament/Pages'), for: 'App\\Filament\\Pages')
             ->pages([
                 Pages\Dashboard::class,
             ])
-            ->discoverWidgets(in: app_path('Filament/Widgets'), for: 'App\\Filament\\Widgets')
             ->widgets([
-                Widgets\AccountWidget::class,
-                Widgets\FilamentInfoWidget::class,
+                WelcomeWidget::class,
+                StatsOverview::class,
+                BooksChartWidget::class,
+                CourseStatsWidget::class,
+                LatestBooksWidget::class,
             ])
             ->middleware([
                 EncryptCookies::class,

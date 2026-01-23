@@ -24,7 +24,7 @@
 
     <!-- Categorias Populares -->
     <div>
-        <h3 class="text-lg font-bold text-gray-900 dark:text-white mb-4">Categorias Populares</h3>
+        <h3 class="text-lg font-bold text-gray-900 dark:text-white mb-4">Cursos por Categoria</h3>
         <div class="space-y-2">
             <a href="{{ request()->routeIs('favorites.index') ? route('favorites.index', ['course' => 'Engenharia Civil']) : route('aluno', ['course' => 'Engenharia Civil']) }}" class="block p-2 hover:bg-gray-50 dark:hover:bg-gray-700 rounded-lg transition-colors">
                 <div class="flex items-center gap-2"><div class="w-3 h-3 bg-blue-500 rounded-full"></div><span class="text-sm text-gray-700 dark:text-gray-300">Engenharia Civil</span></div>

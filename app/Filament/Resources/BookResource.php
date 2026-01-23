@@ -15,8 +15,11 @@ use Filament\Forms\Components\Textarea;
 use Filament\Forms\Components\Hidden;
 use Filament\Forms\Get;
 use Filament\Forms\Set;
+use Filament\Tables\Filters\SelectFilter;
+use Filament\Tables\Filters\TernaryFilter;
 use Smalot\PdfParser\Parser;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Database\Eloquent\Builder;
 
 
 
@@ -24,11 +27,28 @@ class BookResource extends Resource
 {
     protected static ?string $model = Book::class;
 
-    protected static ?string $navigationIcon = 'heroicon-o-rectangle-stack';
+    protected static ?string $navigationIcon = 'heroicon-o-book-open';
+    protected static ?string $activeNavigationIcon = 'heroicon-s-book-open';
 
     protected static ?string $modelLabel = 'Livro';
     protected static ?string $pluralModelLabel = 'Livros';
     protected static ?string $navigationLabel = 'Livros';
+    protected static ?string $navigationGroup = 'Biblioteca';
+    protected static ?int $navigationSort = 1;
+
+    public static function getNavigationBadge(): ?string
+    {
+        $pending = static::getModel()::where('is_verified', false)
+            ->whereNull('rejection_reason')
+            ->count();
+        
+        return $pending > 0 ? (string) $pending : null;
+    }
+
+    public static function getNavigationBadgeColor(): string|array|null
+    {
+        return static::getNavigationBadge() > 0 ? 'warning' : 'success';
+    }
 
     public static function form(Form $form): Form
 {
@@ -140,64 +160,146 @@ class BookResource extends Resource
         return $table
             ->columns([
                 Tables\Columns\ImageColumn::make('cover_path')
-                    ->label('Capa:')
-                    ->width(90)
-                    ->height(150)
-                    ->square(false),
+                    ->label('Capa')
+                    ->width(70)
+                    ->height(100)
+                    ->extraImgAttributes(['class' => 'rounded-lg shadow-md']),
 
                 Tables\Columns\TextColumn::make('title')
-                    ->label('Título:')
+                    ->label('Título')
                     ->searchable()
-                    ->sortable(),
+                    ->sortable()
+                    ->weight('bold')
+                    ->limit(35)
+                    ->tooltip(fn ($record) => $record->title),
 
                 Tables\Columns\TextColumn::make('author')
-                    ->label('Autor:')
-                    ->searchable(),
+                    ->label('Autor')
+                    ->searchable()
+                    ->color('gray')
+                    ->limit(20),
+
+                Tables\Columns\TextColumn::make('course')
+                    ->label('Curso')
+                    ->badge()
+                    ->color('info'),
 
                 Tables\Columns\TextColumn::make('user.name')
-                    ->label('Enviado por:'),
+                    ->label('Enviado por')
+                    ->icon('heroicon-m-user')
+                    ->color('gray'),
 
                 Tables\Columns\TextColumn::make('created_at')
-                    ->label('Criado em:')
+                    ->label('Data')
                     ->dateTime('d/m/Y H:i')
-                    ->sortable(),
+                    ->sortable()
+                    ->color('gray'),
+
+                Tables\Columns\TextColumn::make('status')
+                    ->label('Status')
+                    ->badge()
+                    ->getStateUsing(function ($record) {
+                        if ($record->is_verified) return 'Aprovado';
+                        if ($record->rejection_reason) return 'Rejeitado';
+                        return 'Pendente';
+                    })
+                    ->color(fn (string $state): string => match ($state) {
+                        'Aprovado' => 'success',
+                        'Rejeitado' => 'danger',
+                        'Pendente' => 'warning',
+                        default => 'gray',
+                    })
+                    ->icon(fn (string $state): string => match ($state) {
+                        'Aprovado' => 'heroicon-m-check-badge',
+                        'Rejeitado' => 'heroicon-m-x-circle',
+                        'Pendente' => 'heroicon-m-clock',
+                        default => 'heroicon-m-question-mark-circle',
+                    }),
             ])
+            ->defaultSort('created_at', 'desc')
             ->filters([
-                //
+                SelectFilter::make('status')
+                    ->label('Status')
+                    ->options([
+                        'pending' => '⏳ Pendentes',
+                        'approved' => '✅ Aprovados',
+                        'rejected' => '❌ Rejeitados',
+                    ])
+                    ->query(function (Builder $query, array $data): Builder {
+                        return match ($data['value']) {
+                            'pending' => $query->where('is_verified', false)->whereNull('rejection_reason'),
+                            'approved' => $query->where('is_verified', true),
+                            'rejected' => $query->where('is_verified', false)->whereNotNull('rejection_reason'),
+                            default => $query,
+                        };
+                    }),
+
+                SelectFilter::make('course')
+                    ->label('Curso')
+                    ->options([
+                        'Engenharia Civil ' => 'Engenharia Civil',
+                        'Direito' => 'Direito',
+                        'Enfermagem' => 'Enfermagem',
+                        'Serviço Social' => 'Serviço Social',
+                        'Psicologia' => 'Psicologia',
+                        'Fisioterapia' => 'Fisioterapia',
+                        'Administração' => 'Administração',
+                        'Geral' => 'Geral',
+                    ]),
             ])
+            ->filtersFormColumns(2)
             ->actions([
                 Action::make('aprovar')
+                    ->label('Aprovar')
                     ->icon('heroicon-o-check-circle')
                     ->color('success')
                     ->requiresConfirmation()
+                    ->modalHeading('Aprovar Livro')
+                    ->modalDescription('Tem certeza que deseja aprovar este livro? Ele ficará disponível para todos os alunos.')
+                    ->modalSubmitActionLabel('Sim, aprovar')
                     ->action(function (Book $record) {
                         $record->update(['is_verified' => true, 'rejection_reason' => null]);
                     })
                     ->visible(fn(Book $record) => !$record->is_verified),
 
                 Action::make('rejeitar')
+                    ->label('Rejeitar')
                     ->icon('heroicon-o-x-circle')
                     ->color('danger')
                     ->form([
                         Textarea::make('reason')
                             ->label('Motivo da Rejeição')
                             ->required()
-                            ->rows(4),
+                            ->rows(4)
+                            ->placeholder('Explique o motivo da rejeição...'),
                     ])
+                    ->modalHeading('Rejeitar Livro')
+                    ->modalSubmitActionLabel('Rejeitar')
                     ->action(function (Book $record, array $data) {
                         $record->update([
                             'is_verified' => false,
                             'rejection_reason' => $data['reason'],
                         ]);
                     }),
-                Tables\Actions\EditAction::make(),
-                Tables\Actions\DeleteAction::make(),
+                    
+                Tables\Actions\ViewAction::make()
+                    ->label('')
+                    ->icon('heroicon-o-eye'),
+                Tables\Actions\EditAction::make()
+                    ->label('')
+                    ->icon('heroicon-o-pencil'),
+                Tables\Actions\DeleteAction::make()
+                    ->label('')
+                    ->icon('heroicon-o-trash'),
             ])
             ->bulkActions([
                 Tables\Actions\BulkActionGroup::make([
                     Tables\Actions\DeleteBulkAction::make(),
                 ]),
-            ]);
+            ])
+            ->striped()
+            ->paginated([10, 25, 50, 100])
+            ->poll('30s');
     }
 
     public static function getRelations(): array
@@ -216,3 +318,4 @@ class BookResource extends Resource
         ];
     }
 }
+

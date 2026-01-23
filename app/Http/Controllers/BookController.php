@@ -15,6 +15,13 @@ class BookController extends Controller
         $user = $request->user();
         $search = $request->input('search');
         $course = $request->input('course');
+        $perPage = $request->input('per_page', 24);
+
+        // Validar per_page
+        $allowedPerPage = [12, 24, 48, 96];
+        if (!in_array((int)$perPage, $allowedPerPage)) {
+            $perPage = 24;
+        }
 
         $booksQuery = Book::where('is_verified', true);
 
@@ -34,25 +41,43 @@ class BookController extends Controller
             }
         }
 
-        $books = $booksQuery->orderBy('created_at', 'desc')->get();
+        $books = $booksQuery->orderBy('created_at', 'desc')->paginate($perPage)->withQueryString();
 
-        $newBooks = Book::where('is_verified', true)
+        // Agrupar livros por curso para o layout vitrine (apenas quando não há filtro de curso ou busca)
+        $booksByCourse = collect();
+        if (!$course && !$search) {
+            $allBooks = Book::where('is_verified', true)->orderBy('created_at', 'desc')->get();
+            $booksByCourse = $allBooks->groupBy('course');
+        }
+
+        // Sistema de novidades - verificar última visualização
+        $lastSeenNews = session('last_seen_news', null);
+        $newBooksQuery = Book::where('is_verified', true)
             ->where('created_at', '>=', now()->subDays(7))
-            ->orderBy('created_at', 'desc')
-            ->get();
+            ->orderBy('created_at', 'desc');
+        
+        // Se já viu as novidades após o último livro novo, não mostrar
+        if ($lastSeenNews) {
+            $latestNewBook = $newBooksQuery->first();
+            if ($latestNewBook && $lastSeenNews >= $latestNewBook->created_at) {
+                $newBooks = collect(); // Vazio - já viu tudo
+            } else {
+                $newBooks = $newBooksQuery->get();
+            }
+        } else {
+            $newBooks = $newBooksQuery->get();
+        }
 
         $myBooks = $user->books()
             ->orderBy('created_at', 'desc')
             ->paginate(5, ['*'], 'my_page');
 
-        // Carrega todos os progressos de leitura do usuário
         $readingProgress = $user->readingProgress()->get();
-
-        // Carrega os IDs dos livros favoritados pelo usuário
         $favoriteBookIds = $user->favoriteBooks()->pluck('books.id')->toArray();
 
         return view('dashboard', [
             'books' => $books,
+            'booksByCourse' => $booksByCourse,
             'newBooks' => $newBooks,
             'myBooks' => $myBooks,
             'search' => $search,

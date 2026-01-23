@@ -41,6 +41,12 @@ class FavoriteController extends Controller
 
         $favoriteBooks = $favoriteBooksQuery->with('user')->orderBy('pivot_created_at', 'desc')->get();
 
+        // Agrupar livros favoritos por curso (vitrine)
+        $booksByCourse = collect();
+        if (!$course) {
+            $booksByCourse = $favoriteBooks->groupBy('course');
+        }
+
         $favoriteBookIds = $favoriteBooks->pluck('id')->toArray();
         $readingProgress = $user->readingProgress()->get();
 
@@ -49,6 +55,7 @@ class FavoriteController extends Controller
 
         return view('dashboard', [
             'books' => $favoriteBooks,
+            'booksByCourse' => $booksByCourse,
             'newBooks' => collect(), // Não há "novos" na pág de favoritos
             'myBooks' => $myBooks, // Passa os livros enviados
             'search' => '', // Não há busca na pág de favoritos

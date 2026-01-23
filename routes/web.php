@@ -29,15 +29,18 @@ Route::middleware(['auth'])->group(function () {
     Route::get('/enviar-livro', [BookController::class, 'create'])->name('books.create');
     Route::post('/livros', [BookController::class, 'store'])->name('books.store');
 
-    // Rotas para Favoritos
     Route::post('/favorites/toggle/{book}', [FavoriteController::class, 'toggleFavorite'])->name('favorites.toggle');
     Route::get('/favorites', [FavoriteController::class, 'index'])->name('favorites.index');
 });
 
-// Rotas API para progresso de leitura
 Route::middleware(['auth'])->group(function () {
     Route::get('/api/reading-progress/{bookId}', [ReadingProgressController::class, 'show']);
     Route::post('/api/reading-progress', [ReadingProgressController::class, 'update']);
     Route::post('/api/reading-progress/complete', [ReadingProgressController::class, 'markAsCompleted']);
     Route::get('/api/reading-progress', [ReadingProgressController::class, 'index']);
+    
+    Route::post('/api/mark-news-seen', function () {
+        session(['last_seen_news' => now()]);
+        return response()->json(['success' => true]);
+    })->name('mark-news-seen');
 });
