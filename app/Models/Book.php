@@ -55,6 +55,41 @@ class Book extends Model
         return $this->readingProgress()->where('user_id', $userId)->first();
     }
 
+    /**
+     * Scope para livros verificados/aprovados.
+     */
+    public function scopeVerified($query)
+    {
+        return $query->where('is_verified', true);
+    }
+
+    /**
+     * Scope para busca por título ou autor.
+     */
+    public function scopeSearch($query, string $term)
+    {
+        return $query->where(fn($q) => $q
+            ->where('title', 'like', "%{$term}%")
+            ->orWhere('author', 'like', "%{$term}%")
+        );
+    }
+
+    /**
+     * Scope para livros pendentes de aprovação.
+     */
+    public function scopePending($query)
+    {
+        return $query->where('is_verified', false)->whereNull('rejection_reason');
+    }
+
+    /**
+     * Scope para livros rejeitados.
+     */
+    public function scopeRejected($query)
+    {
+        return $query->where('is_verified', false)->whereNotNull('rejection_reason');
+    }
+
     protected static function booted(): void
     {
         static::deleting(function (Book $book) {

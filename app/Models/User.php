@@ -54,10 +54,10 @@ class User extends Authenticatable implements FilamentUser
 
     public function canAccessPanel(Panel $panel): bool
     {
-        return in_array($this->email, [
-            'admin@biblioteca.com',
-            'chris@admin.com'
-        ]);
+        // Emails de admin podem ser configurados no .env: ADMIN_EMAILS=admin@example.com,outro@example.com
+        $adminEmails = array_map('trim', explode(',', config('app.admin_emails', '')));
+        
+        return in_array($this->email, $adminEmails);
     }
 
     public function books(): HasMany

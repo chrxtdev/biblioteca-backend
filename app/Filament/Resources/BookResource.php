@@ -38,9 +38,7 @@ class BookResource extends Resource
 
     public static function getNavigationBadge(): ?string
     {
-        $pending = static::getModel()::where('is_verified', false)
-            ->whereNull('rejection_reason')
-            ->count();
+        $pending = static::getModel()::pending()->count();
         
         return $pending > 0 ? (string) $pending : null;
     }
@@ -300,6 +298,15 @@ class BookResource extends Resource
             ->striped()
             ->paginated([10, 25, 50, 100])
             ->poll('30s');
+    }
+
+    /**
+     * Customiza a query base para incluir eager loading.
+     * Evita problema N+1 ao carregar o nome do usuário.
+     */
+    public static function getEloquentQuery(): Builder
+    {
+        return parent::getEloquentQuery()->with(['user']);
     }
 
     public static function getRelations(): array

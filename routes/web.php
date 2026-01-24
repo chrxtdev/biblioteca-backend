@@ -4,8 +4,6 @@ use App\Http\Controllers\ProfileController;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\BookController;
 use App\Http\Controllers\FavoriteController;
-use App\Http\Controllers\ReadingProgressController;
-use App\Models\Book;
 
 Route::get('/', function () {
     return redirect()->route('aluno');
@@ -33,14 +31,3 @@ Route::middleware(['auth'])->group(function () {
     Route::get('/favorites', [FavoriteController::class, 'index'])->name('favorites.index');
 });
 
-Route::middleware(['auth'])->group(function () {
-    Route::get('/api/reading-progress/{bookId}', [ReadingProgressController::class, 'show']);
-    Route::post('/api/reading-progress', [ReadingProgressController::class, 'update']);
-    Route::post('/api/reading-progress/complete', [ReadingProgressController::class, 'markAsCompleted']);
-    Route::get('/api/reading-progress', [ReadingProgressController::class, 'index']);
-    
-    Route::post('/api/mark-news-seen', function () {
-        session(['last_seen_news' => now()]);
-        return response()->json(['success' => true]);
-    })->name('mark-news-seen');
-});

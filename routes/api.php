@@ -4,6 +4,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\BookController;
 use App\Http\Controllers\Api\AuthController;
+use App\Http\Controllers\ReadingProgressController;
 
 /*
 |--------------------------------------------------------------------------
@@ -38,4 +39,17 @@ Route::middleware('auth:sanctum')->group(function () {
 
     // Ver meus envios
     Route::get('/meus-livros', [BookController::class, 'myBooks']);
+
+    // Progresso de Leitura
+    Route::get('/reading-progress/{bookId}', [ReadingProgressController::class, 'show']);
+    Route::post('/reading-progress', [ReadingProgressController::class, 'update']);
+    Route::post('/reading-progress/complete', [ReadingProgressController::class, 'markAsCompleted']);
+    Route::get('/reading-progress', [ReadingProgressController::class, 'index']);
+
+    // Marcar novidades como vistas
+    Route::post('/mark-news-seen', function () {
+        session(['last_seen_news' => now()]);
+        return response()->json(['success' => true]);
+    })->name('api.mark-news-seen');
 });
+

@@ -17,6 +17,19 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | Admin Emails
+    |--------------------------------------------------------------------------
+    |
+    | Lista de emails que têm acesso ao painel administrativo (Filament).
+    | Separe múltiplos emails com vírgula no .env.
+    | Exemplo: ADMIN_EMAILS=admin@example.com,outro@example.com
+    |
+    */
+
+    'admin_emails' => env('ADMIN_EMAILS', 'admin@biblioteca.com,chris@admin.com'),
+
+    /*
+    |--------------------------------------------------------------------------
     | Application Environment
     |--------------------------------------------------------------------------
     |
