@@ -21,8 +21,31 @@ Route::get('/livros', [BookController::class, 'index']);
 
 /*
 |--------------------------------------------------------------------------
-| ROTAS PROTEGIDAS (Precisa enviar o Token de Login, Bearer Token)
+| ROTAS PROTEGIDAS COM SANCTUM (Token Bearer OU Cookie de Sessão)
 |--------------------------------------------------------------------------
+| O Laravel Sanctum suporta autenticação "stateful" via cookies quando
+| a requisição vem do mesmo domínio. Isso permite que o frontend Blade
+| faça chamadas AJAX autenticadas usando a sessão existente.
+*/
+Route::middleware(['web', 'auth'])->group(function () {
+    // Progresso de Leitura (para o frontend web com sessão)
+    Route::get('/reading-progress/{bookId}', [ReadingProgressController::class, 'show']);
+    Route::post('/reading-progress', [ReadingProgressController::class, 'update']);
+    Route::post('/reading-progress/complete', [ReadingProgressController::class, 'markAsCompleted']);
+    Route::get('/reading-progress', [ReadingProgressController::class, 'index']);
+
+    // Marcar novidades como vistas
+    Route::post('/mark-news-seen', function () {
+        session(['last_seen_news' => now()]);
+        return response()->json(['success' => true]);
+    })->name('api.mark-news-seen');
+});
+
+/*
+|--------------------------------------------------------------------------
+| ROTAS PROTEGIDAS COM TOKEN SANCTUM (Apenas Bearer Token)
+|--------------------------------------------------------------------------
+| Para aplicações mobile ou SPAs que usam token-based authentication.
 */
 Route::middleware('auth:sanctum')->group(function () {
 
@@ -39,17 +62,4 @@ Route::middleware('auth:sanctum')->group(function () {
 
     // Ver meus envios
     Route::get('/meus-livros', [BookController::class, 'myBooks']);
-
-    // Progresso de Leitura
-    Route::get('/reading-progress/{bookId}', [ReadingProgressController::class, 'show']);
-    Route::post('/reading-progress', [ReadingProgressController::class, 'update']);
-    Route::post('/reading-progress/complete', [ReadingProgressController::class, 'markAsCompleted']);
-    Route::get('/reading-progress', [ReadingProgressController::class, 'index']);
-
-    // Marcar novidades como vistas
-    Route::post('/mark-news-seen', function () {
-        session(['last_seen_news' => now()]);
-        return response()->json(['success' => true]);
-    })->name('api.mark-news-seen');
 });
-

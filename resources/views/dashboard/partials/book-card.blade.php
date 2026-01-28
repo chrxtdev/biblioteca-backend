@@ -43,8 +43,17 @@
         <h4 class="font-medium text-sm text-gray-900 dark:text-white line-clamp-1">{{ $book->title }}</h4>
         <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">{{ $book->author }}</p>
 
-        {{-- Barra de Progresso --}}
-        @if($progress && $book->total_pages > 0)
+        {{-- Barra de Progresso ou Status de Processamento --}}
+        @if(is_null($book->total_pages))
+            {{-- PDF ainda sendo processado --}}
+            <div class="mt-2 flex items-center gap-1.5 text-xs text-amber-600 dark:text-amber-400">
+                <svg class="w-3.5 h-3.5 animate-spin" fill="none" viewBox="0 0 24 24">
+                    <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                    <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path>
+                </svg>
+                <span>Calculando páginas...</span>
+            </div>
+        @elseif($progress && $book->total_pages > 0)
             <div class="mt-2">
                 <div class="bg-gray-200 dark:bg-gray-700 rounded-full h-1.5 w-full">
                     <div class="bg-green-500 h-1.5 rounded-full" style="width: {{ ($progress->current_page / $book->total_pages) * 100 }}%"></div>

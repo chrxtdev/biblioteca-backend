@@ -24,7 +24,11 @@
                         </div>
                         <div class="flex justify-between items-center mt-1">
                             <span class="text-xs text-gray-500 dark:text-gray-400">
-                                Página {{ $progress->current_page }} de {{ $progress->total_pages }}
+                                @if(is_null($progress->total_pages))
+                                    Página {{ $progress->current_page }} de <span class="text-amber-500">calculando...</span>
+                                @else
+                                    Página {{ $progress->current_page }} de {{ $progress->total_pages }}
+                                @endif
                             </span>
                             <span class="text-xs font-bold text-indigo-600 dark:text-indigo-400">{{ $progress->progress_percentage }}%</span>
                         </div>

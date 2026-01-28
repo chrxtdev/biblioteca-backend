@@ -170,32 +170,71 @@
         @else
             {{-- Modo Vitrine: organizado por curso --}}
             @php
-                $courseColors = [
-                    'Engenharia Civil' => 'blue',
-                    'Direito' => 'green',
-                    'Administração' => 'purple',
-                    'Psicologia' => 'yellow',
-                    'Serviço Social' => 'pink',
-                    'Fisioterapia' => 'teal',
-                    'Enfermagem' => 'sky',
+                // Cores mapeadas com classes completas para o Tailwind compilar
+                $courseStyles = [
+                    'Engenharia Civil' => [
+                        'dot' => 'bg-blue-500',
+                        'badge' => 'bg-blue-100 text-blue-700 dark:bg-blue-800 dark:text-blue-200',
+                        'link' => 'text-blue-600 dark:text-blue-400 hover:text-blue-700'
+                    ],
+                    'Direito' => [
+                        'dot' => 'bg-green-500',
+                        'badge' => 'bg-green-100 text-green-700 dark:bg-green-800 dark:text-green-200',
+                        'link' => 'text-green-600 dark:text-green-400 hover:text-green-700'
+                    ],
+                    'Administração' => [
+                        'dot' => 'bg-purple-500',
+                        'badge' => 'bg-purple-100 text-purple-700 dark:bg-purple-800 dark:text-purple-200',
+                        'link' => 'text-purple-600 dark:text-purple-400 hover:text-purple-700'
+                    ],
+                    'Psicologia' => [
+                        'dot' => 'bg-yellow-500',
+                        'badge' => 'bg-yellow-100 text-yellow-700 dark:bg-yellow-800 dark:text-yellow-200',
+                        'link' => 'text-yellow-600 dark:text-yellow-400 hover:text-yellow-700'
+                    ],
+                    'Serviço Social' => [
+                        'dot' => 'bg-pink-500',
+                        'badge' => 'bg-pink-100 text-pink-700 dark:bg-pink-800 dark:text-pink-200',
+                        'link' => 'text-pink-600 dark:text-pink-400 hover:text-pink-700'
+                    ],
+                    'Fisioterapia' => [
+                        'dot' => 'bg-teal-500',
+                        'badge' => 'bg-teal-100 text-teal-700 dark:bg-teal-800 dark:text-teal-200',
+                        'link' => 'text-teal-600 dark:text-teal-400 hover:text-teal-700'
+                    ],
+                    'Enfermagem' => [
+                        'dot' => 'bg-sky-500',
+                        'badge' => 'bg-sky-100 text-sky-700 dark:bg-sky-800 dark:text-sky-200',
+                        'link' => 'text-sky-600 dark:text-sky-400 hover:text-sky-700'
+                    ],
+                    'Geral' => [
+                        'dot' => 'bg-gray-500',
+                        'badge' => 'bg-gray-200 text-gray-700 dark:bg-gray-700 dark:text-gray-200',
+                        'link' => 'text-gray-600 dark:text-gray-400 hover:text-gray-700'
+                    ],
+                ];
+                $defaultStyle = [
+                    'dot' => 'bg-gray-500',
+                    'badge' => 'bg-gray-200 text-gray-700 dark:bg-gray-700 dark:text-gray-200',
+                    'link' => 'text-gray-600 dark:text-gray-400 hover:text-gray-700'
                 ];
             @endphp
 
             <div class="space-y-8">
                 @foreach($booksByCourse as $courseName => $courseBooks)
-                    @php $color = $courseColors[$courseName] ?? 'gray'; @endphp
+                    @php $style = $courseStyles[$courseName] ?? $defaultStyle; @endphp
                     <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm overflow-hidden">
                         {{-- Cabeçalho do Curso --}}
                         <div class="flex items-center justify-between px-6 py-4 border-b border-gray-100 dark:border-gray-700">
                             <div class="flex items-center gap-3">
-                                <div class="w-3 h-3 rounded-full bg-{{ $color }}-500"></div>
+                                <div class="w-3 h-3 rounded-full {{ $style['dot'] }}"></div>
                                 <h2 class="text-lg font-bold text-gray-900 dark:text-white">{{ $courseName }}</h2>
-                                <span class="px-2 py-0.5 bg-{{ $color }}-100 dark:bg-{{ $color }}-900/30 text-{{ $color }}-700 dark:text-{{ $color }}-300 rounded-full text-xs font-medium">
+                                <span class="px-2 py-0.5 {{ $style['badge'] }} rounded-full text-xs font-medium">
                                     {{ $courseBooks->count() }} {{ $courseBooks->count() === 1 ? 'livro' : 'livros' }}
                                 </span>
                             </div>
                             <a href="{{ route('aluno', ['course' => $courseName]) }}" 
-                               class="flex items-center gap-1 text-sm text-{{ $color }}-600 dark:text-{{ $color }}-400 hover:text-{{ $color }}-700 font-medium transition-colors">
+                               class="flex items-center gap-1 text-sm {{ $style['link'] }} font-medium transition-colors">
                                 Ver todos
                                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path></svg>
                             </a>

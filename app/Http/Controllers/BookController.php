@@ -3,17 +3,16 @@
 namespace App\Http\Controllers;
 
 use App\Http\Requests\StoreBookRequest;
+use App\Jobs\ProcessBookPdfJob;
 use App\Models\Book;
 use App\Services\BookService;
-use App\Services\PdfService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 
 class BookController extends Controller
 {
     public function __construct(
-        private BookService $bookService,
-        private PdfService $pdfService
+        private BookService $bookService
     ) {}
 
     /**
@@ -51,6 +50,7 @@ class BookController extends Controller
 
     /**
      * Armazena um novo livro no banco de dados.
+     * O processamento do PDF (contagem de páginas) é feito em background via Queue.
      */
     public function store(StoreBookRequest $request)
     {
@@ -58,15 +58,14 @@ class BookController extends Controller
 
         // Upload do PDF
         $pdfPath = $request->file('file_path')->store('livros_pdfs', 'public');
-        $totalPages = $this->pdfService->countPages(storage_path("app/public/{$pdfPath}"));
 
         // Upload da capa (opcional)
         $coverPath = $request->hasFile('cover_path')
             ? $request->file('cover_path')->store('livros_capas', 'public')
             : null;
 
-        // Cria o livro
-        Book::create([
+        // Cria o livro com total_pages = null (será processado em background)
+        $book = Book::create([
             'title' => $validated['title'],
             'author' => $validated['author'],
             'description' => $validated['description'] ?? null,
@@ -75,8 +74,11 @@ class BookController extends Controller
             'cover_path' => $coverPath,
             'user_id' => Auth::id(),
             'is_verified' => false,
-            'total_pages' => $totalPages,
+            'total_pages' => null, // Será preenchido pelo Job
         ]);
+
+        // Dispara o job para processar o PDF em background
+        ProcessBookPdfJob::dispatch($book);
 
         return to_route('aluno')->with('status', 'livro-enviado');
     }

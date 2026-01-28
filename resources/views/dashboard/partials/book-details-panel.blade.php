@@ -1,5 +1,5 @@
 <!-- Painel de Estatísticas (Coluna Direita) -->
-<div class="w-80 bg-white dark:bg-gray-800 rounded-xl shadow-sm p-6 space-y-6">
+<div class="w-full bg-white dark:bg-gray-800 rounded-xl shadow-sm p-5 space-y-5">
 
     @if(!request()->routeIs('favorites.index'))
     <!-- Estatísticas da Biblioteca -->

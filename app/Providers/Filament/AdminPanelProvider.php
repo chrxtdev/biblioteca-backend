@@ -33,9 +33,9 @@ class AdminPanelProvider extends PanelProvider
             ->login()
 
             ->brandName('Biblioteca Digital')
-            ->brandLogo(asset('images/unicentroma-logo.png'))
-            ->darkModeBrandLogo(asset('images/unicentroma-logo.png'))
-            ->brandLogoHeight('3rem')
+            ->brandLogo(asset('images/unicentro-logo-new.png'))
+            ->darkModeBrandLogo(asset('images/unicentro-logo-new.png'))
+            ->brandLogoHeight('3.5rem')
 
             ->colors([
                 'primary' => Color::Teal,

@@ -9,13 +9,13 @@
         @endif
     @endsection
 
-    <div class="flex bg-gray-50 dark:bg-gray-900 min-h-screen">
+    <div class="flex bg-gray-50 dark:bg-gray-900 min-h-screen overflow-x-hidden">
 
         <!-- Sidebar -->
         @include('dashboard.partials.sidebar')
 
         <!-- Conteúdo Principal ou Favoritos -->
-        <div class="flex-1 overflow-y-auto">
+        <div class="flex-1 min-w-0 overflow-y-auto">
             @if(request()->routeIs('favorites.index'))
                 @include('dashboard.favorites', [
                     'books' => $books,
@@ -38,7 +38,7 @@
         
         <!-- Coluna Direita (Sticky) -->
         @if(!request()->routeIs('profile.edit') && !request()->routeIs('favorites.index'))
-            <div class="hidden lg:block w-80 flex-shrink-0 sticky top-0 self-start h-screen overflow-y-auto overflow-x-hidden py-6 pr-6">
+            <div class="hidden lg:block w-72 flex-shrink-0 p-4">
                 @include('dashboard.partials.book-details-panel')
             </div>
         @endif
