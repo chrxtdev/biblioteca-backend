@@ -44,15 +44,21 @@
             <div class="flex space-x-2 flex-1">
                 <button @click="activeTab = 'todos'"
                         :class="{ 'bg-gradient-to-r from-green-500 to-teal-600 text-white shadow-md': activeTab === 'todos', 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600': activeTab !== 'todos' }"
-                        class="flex-1 px-4 py-2 rounded-lg font-semibold text-sm transition-all duration-300">
+                        class="flex-1 px-4 py-2 rounded-lg font-semibold text-sm"
+                        :style="isLoaded ? 'transition: all 300ms ease-in-out' : ''">
                     Todos os Livros
                 </button>
                 <button @click="activeTab = 'novos'; markNewsSeen()"
                         :class="{ 'bg-gradient-to-r from-green-500 to-teal-600 text-white shadow-md': activeTab === 'novos', 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600': activeTab !== 'novos' }"
-                        class="flex-1 px-4 py-2 rounded-lg font-semibold text-sm transition-all duration-300 relative">
+                        class="flex-1 px-4 py-2 rounded-lg font-semibold text-sm relative"
+                        :style="isLoaded ? 'transition: all 300ms ease-in-out' : ''">
                     Novidades
                     @if($newBooks->count() > 0)
-                        <span class="absolute -top-2 -right-2 bg-red-500 text-white text-xs rounded-full w-6 h-6 flex items-center justify-center border-2 border-white dark:border-gray-800" x-show="!newsSeen">
+                        <span class="absolute -top-2 -right-2 bg-red-500 text-white text-xs rounded-full w-6 h-6 flex items-center justify-center border-2 border-white dark:border-gray-800"
+                              x-show="!newsSeen"
+                              x-transition:leave="transition ease-in duration-300"
+                              x-transition:leave-start="opacity-100 scale-100"
+                              x-transition:leave-end="opacity-0 scale-90">
                             {{ $newBooks->count() }}
                         </span>
                     @endif

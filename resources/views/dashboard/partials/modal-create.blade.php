@@ -30,7 +30,7 @@
                     <option value="Fisioterapia">Fisioterapia</option>
                     <option value="Serviço Social">Serviço Social</option>
                     <option value="Enfermagem">Enfermagem</option>
-                    <option value="Geral">Geral</option>
+                    <option value="Geral">Geral/Outros</option>
                 </select>
             </div>
             <div>

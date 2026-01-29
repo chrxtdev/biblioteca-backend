@@ -48,6 +48,17 @@ class AdminPanelProvider extends PanelProvider
             ->darkMode(true)
             ->sidebarCollapsibleOnDesktop()
             ->sidebarFullyCollapsibleOnDesktop()
+            ->renderHook(
+                'panels::styles.after',
+                fn () => \Illuminate\Support\Facades\Blade::render('
+                    <style>
+                        .fi-sidebar-header {
+                            background: linear-gradient(to right, #22c55e, #0d9488) !important;
+                            border-bottom: 1px solid #0d9488 !important;
+                        }
+                    </style>
+                ')
+            )
             
             ->discoverResources(in: app_path('Filament/Resources'), for: 'App\\Filament\\Resources')
             ->discoverPages(in: app_path('Filament/Pages'), for: 'App\\Filament\\Pages')

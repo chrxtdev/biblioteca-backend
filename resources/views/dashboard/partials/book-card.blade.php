@@ -5,8 +5,13 @@
     $isFavorited = in_array($book->id, $favoriteBookIds);
 @endphp
 
-<div x-data="{ isFavorited: {{ $isFavorited ? 'true' : 'false' }} }" class="group transform transition-all duration-300 hover:scale-105">
-    <div class="relative w-full aspect-[3/4] bg-white dark:bg-gray-800 rounded-lg shadow-sm hover:shadow-lg transition-all duration-300 overflow-hidden border border-gray-200 dark:border-gray-700">
+<div x-data="{ isFavorited: {{ $isFavorited ? 'true' : 'false' }} }" 
+     class="group"
+     :class="{ 'hover:scale-105': isLoaded }"
+     :style="isLoaded ? 'transition: transform 300ms ease-in-out' : ''">
+    <div class="relative w-full aspect-[3/4] bg-white dark:bg-gray-800 rounded-lg shadow-sm hover:shadow-lg overflow-hidden border border-gray-200 dark:border-gray-700"
+         :style="isLoaded ? 'transition: box-shadow 300ms ease-in-out' : ''"
+    >
 
         {{-- Imagem ou Placeholder --}}
         <div @click="openReader({{ json_encode($book) }})" class="absolute inset-0 cursor-pointer">

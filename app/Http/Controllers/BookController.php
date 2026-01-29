@@ -41,14 +41,6 @@ class BookController extends Controller
     }
 
     /**
-     * Exibe o formulário de criação de livro.
-     */
-    public function create()
-    {
-        return view('books.create');
-    }
-
-    /**
      * Armazena um novo livro no banco de dados.
      * O processamento do PDF (contagem de páginas) é feito em background via Queue.
      */
