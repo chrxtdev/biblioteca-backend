@@ -68,6 +68,8 @@
                 progressSaved: false,
                 viewMode: 'single', // 'single', 'double', 'scroll'
                 isFullscreen: false,
+                pageObserver: null,
+
 
                 init() {
                     // Evita animações na carga inicial
@@ -235,32 +237,89 @@
                     const container = document.getElementById('pdf-scroll-container');
                     if (!container) return;
                     
+                    // Limpa observer anterior
+                    if (this.pageObserver) {
+                        this.pageObserver.disconnect();
+                        this.pageObserver = null;
+                    }
+
                     container.innerHTML = '';
                     window._pdfState.renderedPages = [];
 
                     try {
+                        const page1 = await pdfDoc.getPage(1);
+                        const viewport1 = page1.getViewport({ scale: this.pdfScale });
+                        
+                        // Configura IntersectionObserver
+                        this.pageObserver = new IntersectionObserver((entries) => {
+                            entries.forEach(entry => {
+                                if (entry.isIntersecting) {
+                                    const canvas = entry.target;
+                                    const pageNum = parseInt(canvas.dataset.page);
+                                    this.renderSinglePageOnScroll(canvas, pageNum);
+                                }
+                            });
+                        }, {
+                            root: container,
+                            rootMargin: '600px', // Pré-carrega páginas muito antes de entrarem na tela
+                            threshold: 0
+                        });
+
+                        // Cria Placeholders instantaneamente
                         for (let i = 1; i <= pdfDoc.numPages; i++) {
-                            const page = await pdfDoc.getPage(i);
                             const canvas = document.createElement('canvas');
                             canvas.id = `pdf-page-${i}`;
-                            canvas.className = 'shadow-2xl rounded-lg bg-white';
+                            canvas.className = 'shadow-2xl rounded-lg bg-white mb-6 mx-auto';
                             canvas.dataset.page = i;
                             
-                            const ctx = canvas.getContext('2d');
-                            const viewport = page.getViewport({ scale: this.pdfScale });
-                            canvas.height = viewport.height;
-                            canvas.width = viewport.width;
+                            // Define tamanho inicial para a barra de rolagem funcionar
+                            canvas.width = viewport1.width;
+                            canvas.height = viewport1.height;
+                            canvas.style.width = `${viewport1.width}px`;
+                            canvas.style.height = `${viewport1.height}px`;
+                            canvas.style.display = 'block';
 
-                            await page.render({ canvasContext: ctx, viewport: viewport }).promise;
-                            
                             container.appendChild(canvas);
-                            window._pdfState.renderedPages.push(canvas);
+                            this.pageObserver.observe(canvas);
                         }
-                        this.loading = false;
+                        
+                        this.loading = false; // Libera UI imediatamente
                     } catch (error) {
-                        console.error("Erro ao renderizar todas as páginas:", error);
+                        console.error("Erro lazy load:", error);
                         this.loading = false;
                         this.pdfError = error.message;
+                    }
+                },
+
+                async renderSinglePageOnScroll(canvas, pageNum) {
+                    if (canvas.dataset.rendered || canvas.dataset.rendering) return;
+                    canvas.dataset.rendering = "true";
+
+                    try {
+                        const pdfDoc = window._pdfState.doc;
+                        const page = await pdfDoc.getPage(pageNum);
+                        const ctx = canvas.getContext('2d');
+                        const viewport = page.getViewport({ scale: this.pdfScale });
+
+                        // Ajusta tamanho se for diferente da pág 1
+                        if (canvas.width !== viewport.width || canvas.height !== viewport.height) {
+                            canvas.width = viewport.width;
+                            canvas.height = viewport.height;
+                            canvas.style.width = `${viewport.width}px`;
+                            canvas.style.height = `${viewport.height}px`;
+                        }
+
+                        await page.render({ canvasContext: ctx, viewport: viewport }).promise;
+                        
+                        canvas.dataset.rendered = "true";
+                        delete canvas.dataset.rendering;
+                        
+                        // Para de observar depois de renderizado (Lazy Load apenas, não Virtual Scroll completo)
+                        if (this.pageObserver) {
+                            this.pageObserver.unobserve(canvas);
+                        }
+                    } catch (e) {
+                        console.error(`Erro render pag ${pageNum}:`, e);
                     }
                 },
 
