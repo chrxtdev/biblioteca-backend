@@ -26,7 +26,7 @@ class StoreBookRequest extends FormRequest
             'title' => 'required|string|max:255',
             'author' => 'required|string|max:255',
             'description' => 'nullable|string|max:5000',
-            'course' => 'required|string|in:' . implode(',', array_keys(Book::COURSES)),
+            'course' => 'required|string|in:' . implode(',', \App\Enums\Course::values()),
             'file_path' => 'required|file|mimes:pdf|max:10240',
             'cover_path' => 'nullable|image|mimes:jpg,jpeg,png,webp|max:5120',
         ];

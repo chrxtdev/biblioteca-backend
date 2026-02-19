@@ -22,7 +22,7 @@ class BookFactory extends Factory
             'title' => fake()->sentence(4),
             'author' => fake()->name(),
             'description' => fake()->paragraph(3),
-            'course' => fake()->randomElement(Book::COURSES),
+            'course' => fake()->randomElement(\App\Enums\Course::values()),
             'file_path' => 'livros_pdfs/fake_book.pdf', // Caminho falso, o arquivo não existirá
             'cover_path' => null, // Deixamos nulo, a UI já lida com isso
             'is_verified' => true, // Importante para que apareçam na listagem

@@ -28,13 +28,51 @@ class PdfService
                 return 0;
             }
 
+            // Aumenta limites para arquivos grandes
+            ini_set('memory_limit', '512M');
+            set_time_limit(120);
+
             $pdf = $this->parser->parseFile($filePath);
-            return count($pdf->getPages());
-        } catch (\Exception $e) {
-            Log::error("PdfService: Erro ao processar PDF: {$e->getMessage()}", [
+            $pages = $pdf->getPages();
+            $count = count($pages);
+
+            // Fallback se o parser retornar 0 (pode ser PDF criptografado ou malformado)
+            if ($count === 0) {
+                return $this->countPagesRegex($filePath);
+            }
+
+            return $count;
+        } catch (\Throwable $e) {
+            Log::error("PdfService: Erro ao processar PDF (Parser): {$e->getMessage()}", [
                 'file' => $filePath,
-                'exception' => $e
             ]);
+            
+            // Tenta fallback com Regex em caso de erro fatal ou exceção
+            return $this->countPagesRegex($filePath);
+        }
+    }
+
+    /**
+     * Tentativa de contar páginas via Regex (menos preciso, mas robusto para falhas).
+     */
+    private function countPagesRegex(string $filePath): int
+    {
+        try {
+            if (!file_exists($filePath)) return 0;
+            
+            $content = file_get_contents($filePath);
+            // Conta ocorrências de /Type /Page
+            $count = preg_match_all("/\/Type\s*\/Page[^s]/", $content, $matches);
+            
+            if ($count === 0) {
+                 // Tenta outra variação comum
+                 $count = preg_match_all("/\/Page\W/", $content, $matches);
+            }
+
+            Log::info("PdfService: Contagem via Regex: {$count}", ['file' => $filePath]);
+            return $count;
+        } catch (\Throwable $e) {
+            Log::error("PdfService: Erro no fallback Regex: {$e->getMessage()}");
             return 0;
         }
     }

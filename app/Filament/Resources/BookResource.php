@@ -69,16 +69,8 @@ class BookResource extends Resource
 
                                     Forms\Components\Select::make('course')
                                         ->label('Curso / Categoria')
-                                        ->options([
-                                            'Engenharia Civil ' => 'Engenharia Civil ',
-                                            'Direito' => 'Direito',
-                                            'Enfermagem' => 'Enfermagem',
-                                            'Serviço Social' => 'Serviço Social',
-                                            'Psicologia' => 'Psicologia',
-                                            'Fisioterapia' => 'Fisioterapia',
-                                            'Administração' => 'Administração',
-                                            'Geral' => 'Geral',
-                                        ])->required(),
+                                        ->options(\App\Enums\Course::options())
+                                        ->required(),
 
                                     Forms\Components\Textarea::make('description')
                                         ->label('Descrição')->columnSpanFull()->rows(3),
@@ -101,26 +93,32 @@ class BookResource extends Resource
                                             try {
                                                 $path = Storage::disk('public')->path($state);
                                                 if (file_exists($path)) {
-                                                    $parser = new Parser();
-                                                    $pdf = $parser->parseFile($path);
-                                                    $pages = count($pdf->getPages());
+                                                    $pdfService = app(\App\Services\PdfService::class);
+                                                    $pages = $pdfService->countPages($path);
                                                     $set('total_pages', $pages);
                                                 }
                                             } catch (\Exception $e) {
-                                                // Log error or ignore
+                                                // Log error
+                                                \Illuminate\Support\Facades\Log::error('Erro ao contar páginas no BookResource: ' . $e->getMessage());
                                             }
                                         }),
 
                                     Forms\Components\Hidden::make('total_pages'),
+                                    Forms\Components\Hidden::make('user_id')
+                                        ->default(auth()->id()),
 
                                     Forms\Components\Placeholder::make('pdf_viewer')
                                         ->label('Pré-visualização')
-                                        ->content(fn ($record) => $record && $record->file_path
-                                            ? new \Illuminate\Support\HtmlString('
-                                                <iframe src="' . asset('storage/' . $record->file_path) . '"
-                                                    width="100%" height="600px" style="border: none;">
-                                                </iframe>')
-                                            : 'Nenhum PDF carregado.'),
+                                        ->content(fn ($record, Get $get) => 
+                                            ($record && $record->file_path)
+                                                ? new \Illuminate\Support\HtmlString('
+                                                    <iframe src="' . asset('storage/' . $record->file_path) . '"
+                                                        width="100%" height="600px" style="border: none;">
+                                                    </iframe>')
+                                                : (($get('file_path')) 
+                                                    ? 'Salve o livro depois visualize o PDF.' 
+                                                    : 'Nenhum PDF carregado.')
+                                        ),
                                 ]),
                         ]),
 
@@ -135,7 +133,7 @@ class BookResource extends Resource
                                         ->directory('livros_capas')->columnSpanFull(),
 
                                     Forms\Components\Toggle::make('is_verified')
-                                        ->label('Aprovado?')->disabled()
+                                        ->label('Aprovado?')
                                         ->onIcon('heroicon-s-check-circle')
                                         ->offIcon('heroicon-s-x-circle')
                                         ->onColor('success')->offColor('danger'),
@@ -159,39 +157,47 @@ class BookResource extends Resource
             ->columns([
                 Tables\Columns\ImageColumn::make('cover_path')
                     ->label('Capa')
-                    ->width(70)
-                    ->height(100)
-                    ->extraImgAttributes(['class' => 'rounded-lg shadow-md']),
+                    ->width(50)
+                    ->height(75)
+                    ->extraImgAttributes(['class' => 'rounded-md shadow-sm'])
+                    ->toggleable(isToggledHiddenByDefault: false),
 
                 Tables\Columns\TextColumn::make('title')
                     ->label('Título')
                     ->searchable()
                     ->sortable()
                     ->weight('bold')
-                    ->limit(35)
-                    ->tooltip(fn ($record) => $record->title),
+                    ->limit(30)
+                    ->tooltip(fn ($record) => $record->title)
+                    ->description(fn ($record) => $record->author) // Combine Author as description
+                    ->toggleable(),
 
                 Tables\Columns\TextColumn::make('author')
                     ->label('Autor')
                     ->searchable()
+                    ->toggleable(isToggledHiddenByDefault: true) // Hidden because it's now subtext of Title
                     ->color('gray')
                     ->limit(20),
 
                 Tables\Columns\TextColumn::make('course')
                     ->label('Curso')
                     ->badge()
-                    ->color('info'),
+                    ->color('info')
+                    ->sortable()
+                    ->toggleable(),
 
                 Tables\Columns\TextColumn::make('user.name')
                     ->label('Enviado por')
                     ->icon('heroicon-m-user')
-                    ->color('gray'),
+                    ->color('gray')
+                    ->toggleable(isToggledHiddenByDefault: true),
 
                 Tables\Columns\TextColumn::make('created_at')
                     ->label('Data')
                     ->dateTime('d/m/Y H:i')
                     ->sortable()
-                    ->color('gray'),
+                    ->color('gray')
+                    ->toggleable(isToggledHiddenByDefault: true),
 
                 Tables\Columns\TextColumn::make('status')
                     ->label('Status')
@@ -212,7 +218,8 @@ class BookResource extends Resource
                         'Rejeitado' => 'heroicon-m-x-circle',
                         'Pendente' => 'heroicon-m-clock',
                         default => 'heroicon-m-question-mark-circle',
-                    }),
+                    })
+                    ->toggleable(),
             ])
             ->defaultSort('created_at', 'desc')
             ->filters([
@@ -234,16 +241,7 @@ class BookResource extends Resource
 
                 SelectFilter::make('course')
                     ->label('Curso')
-                    ->options([
-                        'Engenharia Civil ' => 'Engenharia Civil',
-                        'Direito' => 'Direito',
-                        'Enfermagem' => 'Enfermagem',
-                        'Serviço Social' => 'Serviço Social',
-                        'Psicologia' => 'Psicologia',
-                        'Fisioterapia' => 'Fisioterapia',
-                        'Administração' => 'Administração',
-                        'Geral' => 'Geral',
-                    ]),
+                    ->options(\App\Enums\Course::options()),
             ])
             ->filtersFormColumns(2)
             ->actions([
@@ -257,6 +255,7 @@ class BookResource extends Resource
                     ->modalSubmitActionLabel('Sim, aprovar')
                     ->action(function (Book $record) {
                         $record->update(['is_verified' => true, 'rejection_reason' => null]);
+                        app(\App\Services\BookService::class)->clearBookCache();
                     })
                     ->visible(fn(Book $record) => !$record->is_verified),
 
@@ -278,7 +277,25 @@ class BookResource extends Resource
                             'is_verified' => false,
                             'rejection_reason' => $data['reason'],
                         ]);
-                    }),
+                        app(\App\Services\BookService::class)->clearBookCache();
+                    })
+                    ->visible(fn (Book $record) => !$record->rejection_reason),
+
+                Action::make('undo_rejection')
+                    ->label('Voltar para Análise')
+                    ->icon('heroicon-o-arrow-path')
+                    ->color('warning')
+                    ->requiresConfirmation()
+                    ->modalHeading('Retornar para Análise')
+                    ->modalDescription('Deseja retornar este livro para o status de "Pendente"?')
+                    ->action(function (Book $record) {
+                        $record->update([
+                            'is_verified' => false,
+                            'rejection_reason' => null,
+                        ]);
+                        app(\App\Services\BookService::class)->clearBookCache();
+                    })
+                    ->visible(fn (Book $record) => $record->rejection_reason !== null || $record->is_verified),
                     
                 Tables\Actions\ViewAction::make()
                     ->label('')

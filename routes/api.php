@@ -3,8 +3,9 @@
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\BookController;
-use App\Http\Controllers\Api\AuthController;
+use App\Http\Controllers\Api\InternalController;
 use App\Http\Controllers\ReadingProgressController;
+use App\Http\Controllers\Api\AuthController;
 
 /*
 |--------------------------------------------------------------------------
@@ -13,8 +14,8 @@ use App\Http\Controllers\ReadingProgressController;
 */
 
 // Registro e Login
-Route::post('/register', [AuthController::class, 'register']);
-Route::post('/login', [AuthController::class, 'login']);
+Route::post('/register', [AuthController::class, 'register'])->middleware('throttle:api');
+Route::post('/login', [AuthController::class, 'login'])->middleware('throttle:api');
 
 // Vitrine de Livros (Aprovados)
 Route::get('/livros', [BookController::class, 'index']);
@@ -35,30 +36,25 @@ Route::middleware(['web', 'auth'])->group(function () {
     Route::get('/reading-progress', [ReadingProgressController::class, 'index']);
 
     // Marcar novidades como vistas
-    Route::post('/mark-news-seen', function () {
-        session(['last_seen_news' => now()]);
-        return response()->json(['success' => true]);
-    })->name('api.mark-news-seen');
+    Route::post('/mark-news-seen', [InternalController::class, 'markNewsSeen'])->name('api.mark-news-seen');
 });
 
 /*
 |--------------------------------------------------------------------------
 | ROTAS PROTEGIDAS COM TOKEN SANCTUM (Apenas Bearer Token)
 |--------------------------------------------------------------------------
-| Para aplicações mobile ou SPAs que usam token-based authentication.
+| Para aplicações mobile ou SPAs que usar token-based authentication.
 */
 Route::middleware('auth:sanctum')->group(function () {
 
     // Dados do Usuário Logado
-    Route::get('/user', function (Request $request) {
-        return $request->user();
-    });
+    Route::get('/user', [InternalController::class, 'user']);
 
     // Logout
     Route::post('/logout', [AuthController::class, 'logout']);
 
     // Enviar Livro
-    Route::post('/livros', [BookController::class, 'store']);
+    Route::post('/livros', [BookController::class, 'store'])->middleware('throttle:uploads');
 
     // Ver meus envios
     Route::get('/meus-livros', [BookController::class, 'myBooks']);

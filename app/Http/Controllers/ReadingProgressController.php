@@ -20,6 +20,17 @@ class ReadingProgressController extends Controller
             ->where('book_id', $bookId)
             ->first();
 
+        // Se não existir, retorna objeto vazio (mas não persiste) para evitar erros no front
+        if (!$progress) {
+             $progress = new ReadingProgress([
+                'user_id' => $user->id,
+                'book_id' => $bookId,
+                'current_page' => 0,
+                'total_pages' => 0,
+                'progress_percentage' => 0
+            ]);
+        }
+
         return response()->json([
             'progress' => $progress
         ]);
@@ -42,18 +53,7 @@ class ReadingProgressController extends Controller
         $totalPages = $request->total_pages;
 
         // Buscar ou criar progresso
-        $progress = ReadingProgress::firstOrCreate(
-            [
-                'user_id' => $user->id,
-                'book_id' => $bookId
-            ],
-            [
-                'current_page' => 0,
-                'total_pages' => $totalPages,
-                'progress_percentage' => 0,
-                'is_completed' => false
-            ]
-        );
+        $progress = ReadingProgress::getForUser($user, $bookId);
 
         // Atualizar progresso
         $progress->updateProgress($currentPage, $totalPages);
@@ -76,12 +76,7 @@ class ReadingProgressController extends Controller
         $user = $request->user();
         $bookId = $request->book_id;
 
-        $progress = ReadingProgress::firstOrCreate(
-            [
-                'user_id' => $user->id,
-                'book_id' => $bookId
-            ]
-        );
+        $progress = ReadingProgress::getForUser($user, $bookId);
 
         // Marcar como concluído
         $progress->is_completed = true;

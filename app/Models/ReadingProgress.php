@@ -40,9 +40,28 @@ class ReadingProgress extends Model
     {
         $this->current_page = $currentPage;
         $this->total_pages = $totalPages;
-        $this->progress_percentage = $totalPages > 0 ? round(($currentPage / $totalPages) * 100) : 0;
+        $this->progress_percentage = $totalPages > 0 ? (int) round(($currentPage / $totalPages) * 100) : 0;
         $this->is_completed = $currentPage >= $totalPages;
         $this->last_read_at = now();
         $this->save();
+    }
+
+    /**
+     * Get or create reading progress for a user and book.
+     */
+    public static function getForUser(User $user, int $bookId): self
+    {
+        return static::firstOrCreate(
+            [
+                'user_id' => $user->id,
+                'book_id' => $bookId
+            ],
+            [
+                'current_page' => 0,
+                'total_pages' => 0,
+                'progress_percentage' => 0,
+                'is_completed' => false
+            ]
+        );
     }
 }

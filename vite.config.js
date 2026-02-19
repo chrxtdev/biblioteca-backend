@@ -15,7 +15,7 @@ export default defineConfig({
         ],
         host: '0.0.0.0',
         hmr: {
-            host: 'proscience-unimposingly-nieves.ngrok-free.dev',
+            host: 'localhost',
         },
     },
 });

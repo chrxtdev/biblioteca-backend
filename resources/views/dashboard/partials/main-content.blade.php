@@ -1,96 +1,73 @@
 <!-- Conteúdo Principal -->
 <div class="p-6 space-y-6">
-    <!-- Header com Busca -->
-    <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm p-6">
-        <div class="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4">
-            <div>
-                <h1 class="text-2xl font-bold text-gray-900 dark:text-white">Olá, {{ Auth::user()->name }}! 👋</h1>
-                <p class="text-gray-500 dark:text-gray-400 mt-1">Explore nosso acervo de livros</p>
-            </div>
-
-            <div class="flex gap-3 w-full lg:w-auto">
-                <form method="GET" action="{{ route('aluno') }}" class="flex-1 lg:flex-initial">
+    <!-- Hero Section -->
+    <div class="relative bg-gradient-to-r from-gray-900 to-gray-800 rounded-3xl p-8 md:p-12 overflow-hidden shadow-2xl mb-10">
+        <!-- Background Pattern -->
+        <div class="absolute inset-0 opacity-10">
+            <svg class="h-full w-full" viewBox="0 0 100 100" preserveAspectRatio="none">
+                <path d="M0 100 C 20 0 50 0 100 100 Z" fill="white" />
+            </svg>
+        </div>
+        
+        <div class="relative z-10 flex flex-col md:flex-row justify-between items-center gap-8">
+            <div class="max-w-2xl">
+                <h1 class="text-4xl md:text-5xl font-extrabold text-white mb-4 tracking-tight">
+                    Explore o Conhecimento
+                </h1>
+                <p class="text-lg text-gray-300 mb-8 leading-relaxed">
+                    Bem-vindo ao seu acervo digital. Descubra livros, artigos e materiais acadêmicos selecionados para impulsionar seus estudos.
+                </p>
+                
+                <!-- Search Bar in Hero -->
+                <form method="GET" action="{{ route('aluno') }}" class="relative w-full max-w-lg">
                     <div class="relative">
                         <input type="text" name="search" value="{{ request('search') }}"
-                               placeholder="Buscar livros, autores..."
-                               class="w-full lg:w-80 pl-10 pr-4 py-2.5 border border-gray-200 dark:border-gray-700 rounded-lg bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-white focus:ring-2 focus:ring-teal-500 focus:border-transparent text-sm placeholder-gray-400">
-                        <svg class="w-4 h-4 text-gray-400 absolute left-3 top-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
+                               placeholder="Pesquisar por título, autor ou tópico..."
+                               class="w-full pl-12 pr-4 py-4 rounded-xl border-0 bg-white/10 backdrop-blur-md text-white placeholder-gray-400 focus:ring-2 focus:ring-teal-400 focus:bg-white/20 transition-all shadow-lg">
+                        <svg class="w-6 h-6 text-gray-400 absolute left-4 top-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
+                        </svg>
+                        @if(request('search'))
+                            <a href="{{ route('aluno') }}" class="absolute right-4 top-4 text-gray-400 hover:text-white transition-colors">
+                                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+                            </a>
+                        @endif
                     </div>
                 </form>
-
-                <button @click="showCreate = true"
-                   class="flex items-center gap-2 bg-gradient-to-r from-blue-500 to-blue-600 text-white px-5 py-2.5 rounded-full font-semibold text-sm shadow-lg hover:shadow-xl transform hover:-translate-y-0.5 transition-all duration-300">
-                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path></svg>
-                    <span class="hidden sm:inline">Enviar Livro</span>
+            </div>
+            
+            <!-- Quick Actions -->
+            <div class="flex flex-col gap-4">
+                 <button @click="showCreate = true"
+                    class="group flex items-center gap-3 bg-teal-500 hover:bg-teal-400 text-white px-6 py-4 rounded-xl font-bold shadow-lg hover:shadow-teal-500/30 transform hover:-translate-y-1 transition-all duration-300">
+                    <div class="bg-white/20 p-2 rounded-lg group-hover:rotate-12 transition-transform">
+                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path></svg>
+                    </div>
+                    <span>Enviar Livro</span>
                 </button>
             </div>
         </div>
     </div>
 
-    <!-- Alerta de Sucesso -->
-    @if (session('status') === 'livro-enviado')
-    <div class="bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 text-green-700 dark:text-green-300 px-4 py-3 rounded-lg">
-        <div class="flex items-center gap-2">
-            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
-            <span class="font-medium">Sucesso!</span>
-            <span class="text-sm">Livro enviado para análise.</span>
-        </div>
-    </div>
-    @endif
-
-    <!-- Abas de Navegação + Seletor de Quantidade -->
-    <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm p-2">
-        <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-            <div class="flex space-x-2 flex-1">
-                <button @click="activeTab = 'todos'"
-                        :class="{ 'bg-gradient-to-r from-green-500 to-teal-600 text-white shadow-md': activeTab === 'todos', 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600': activeTab !== 'todos' }"
-                        class="flex-1 px-4 py-2 rounded-lg font-semibold text-sm"
-                        :style="isLoaded ? 'transition: all 300ms ease-in-out' : ''">
-                    Todos os Livros
-                </button>
-                <button @click="activeTab = 'novos'; markNewsSeen()"
-                        :class="{ 'bg-gradient-to-r from-green-500 to-teal-600 text-white shadow-md': activeTab === 'novos', 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600': activeTab !== 'novos' }"
-                        class="flex-1 px-4 py-2 rounded-lg font-semibold text-sm relative"
-                        :style="isLoaded ? 'transition: all 300ms ease-in-out' : ''">
-                    Novidades
-                    @if($newBooks->count() > 0)
-                        <span class="absolute -top-2 -right-2 bg-red-500 text-white text-xs rounded-full w-6 h-6 flex items-center justify-center border-2 border-white dark:border-gray-800"
-                              x-show="!newsSeen"
-                              x-transition:leave="transition ease-in duration-300"
-                              x-transition:leave-start="opacity-100 scale-100"
-                              x-transition:leave-end="opacity-0 scale-90">
-                            {{ $newBooks->count() }}
-                        </span>
-                    @endif
-                </button>
-            </div>
-
-            <!-- Seletor de Quantidade por Página -->
-            <div class="flex items-center gap-2" x-show="activeTab === 'todos'">
-                <span class="text-sm text-gray-500 dark:text-gray-400">Exibir:</span>
-                <form method="GET" action="{{ route('aluno') }}" id="perPageForm">
-                    @if(request('search'))
-                        <input type="hidden" name="search" value="{{ request('search') }}">
-                    @endif
-                    @if(request('course'))
-                        <input type="hidden" name="course" value="{{ request('course') }}">
-                    @endif
-                    <select name="per_page" onchange="document.getElementById('perPageForm').submit()"
-                            class="text-sm bg-gray-100 dark:bg-gray-700 border-0 rounded-lg py-2 pl-3 pr-8 text-gray-700 dark:text-gray-300 focus:ring-2 focus:ring-teal-500 cursor-pointer appearance-none"
-                            style="background-image: url('data:image/svg+xml;charset=UTF-8,%3csvg xmlns=%27http://www.w3.org/2000/svg%27 viewBox=%270 0 24 24%27 fill=%27none%27 stroke=%27%236b7280%27 stroke-width=%272%27 stroke-linecap=%27round%27 stroke-linejoin=%27round%27%3e%3cpolyline points=%276 9 12 15 18 9%27%3e%3c/polyline%3e%3c/svg%3e'); background-repeat: no-repeat; background-position: right 0.5rem center; background-size: 1rem;">
-                        <option value="12" {{ request('per_page', 24) == 12 ? 'selected' : '' }}>12</option>
-                        <option value="24" {{ request('per_page', 24) == 24 ? 'selected' : '' }}>24</option>
-                        <option value="48" {{ request('per_page', 24) == 48 ? 'selected' : '' }}>48</option>
-                        <option value="96" {{ request('per_page', 24) == 96 ? 'selected' : '' }}>96</option>
-                    </select>
-                </form>
-                <span class="text-sm text-gray-500 dark:text-gray-400">por página</span>
-            </div>
+    <!-- Category Filters -->
+    <div class="mb-8 overflow-x-auto pb-4 scrollbar-hide">
+        <div class="flex gap-3">
+            <a href="{{ route('aluno') }}" 
+               class="whitespace-nowrap px-6 py-2.5 rounded-full font-medium {{ !request('course') && !request('search') ? 'bg-gray-900 text-white shadow-lg' : 'bg-white dark:bg-gray-800 text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700' }}">
+                Todas as Áreas
+            </a>
+            
+            @foreach(\App\Enums\Course::values() as $courseName)
+                <a href="{{ route('aluno', ['course' => $courseName]) }}"
+                   class="whitespace-nowrap px-6 py-2.5 rounded-full font-medium {{ request('course') === $courseName ? 'bg-teal-500 text-white shadow-lg' : 'bg-white dark:bg-gray-800 text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700' }}">
+                   {{ $courseName }}
+                </a>
+            @endforeach
         </div>
     </div>
 
     <!-- Aba: Todos os Livros -->
-    <div x-show="activeTab === 'todos'" x-cloak>
+    <div>
         @if($books->isEmpty() && !$course && !$search)
             <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm p-12 text-center">
                 <h3 class="text-lg font-medium text-gray-900 dark:text-white mb-2">Nenhum livro encontrado</h3>
@@ -100,11 +77,16 @@
             {{-- Modo filtrado: mostrar grade simples --}}
             @if($books->isEmpty())
                 <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm p-12 text-center">
+                    <div class="w-16 h-16 mx-auto mb-4 bg-gray-100 dark:bg-gray-700/50 rounded-full flex items-center justify-center">
+                        <svg class="w-8 h-8 text-gray-400 dark:text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"></path>
+                        </svg>
+                    </div>
                     <h3 class="text-lg font-medium text-gray-900 dark:text-white mb-2">Nenhum livro encontrado</h3>
-                    <p class="text-gray-500 dark:text-gray-400">Nenhum livro corresponde à sua busca ou filtro.</p>
-                    <a href="{{ route('aluno') }}" class="mt-4 inline-flex items-center gap-2 text-teal-600 hover:text-teal-700 font-medium">
+                    <p class="text-gray-500 dark:text-gray-400 max-w-sm mx-auto">Não encontramos nada com esses filtros. Tente buscar por outros termos.</p>
+                    <a href="{{ route('aluno') }}" class="mt-6 inline-flex items-center gap-2 px-4 py-2 bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-200 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors font-medium">
                         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"></path></svg>
-                        Voltar para todos os livros
+                        Limpar todos os filtros
                     </a>
                 </div>
             @else
@@ -178,42 +160,27 @@
             @php
                 // Cores mapeadas com classes completas para o Tailwind compilar
                 $courseStyles = [
-                    'Engenharia Civil' => [
+                    'Engenharias' => [
                         'dot' => 'bg-blue-500',
                         'badge' => 'bg-blue-100 text-blue-700 dark:bg-blue-800 dark:text-blue-200',
                         'link' => 'text-blue-600 dark:text-blue-400 hover:text-blue-700'
                     ],
-                    'Direito' => [
-                        'dot' => 'bg-green-500',
-                        'badge' => 'bg-green-100 text-green-700 dark:bg-green-800 dark:text-green-200',
-                        'link' => 'text-green-600 dark:text-green-400 hover:text-green-700'
-                    ],
-                    'Administração' => [
+                    'Ciências Humanas e Sociais' => [
                         'dot' => 'bg-purple-500',
                         'badge' => 'bg-purple-100 text-purple-700 dark:bg-purple-800 dark:text-purple-200',
                         'link' => 'text-purple-600 dark:text-purple-400 hover:text-purple-700'
                     ],
-                    'Psicologia' => [
-                        'dot' => 'bg-yellow-500',
-                        'badge' => 'bg-yellow-100 text-yellow-700 dark:bg-yellow-800 dark:text-yellow-200',
-                        'link' => 'text-yellow-600 dark:text-yellow-400 hover:text-yellow-700'
-                    ],
-                    'Serviço Social' => [
-                        'dot' => 'bg-pink-500',
-                        'badge' => 'bg-pink-100 text-pink-700 dark:bg-pink-800 dark:text-pink-200',
-                        'link' => 'text-pink-600 dark:text-pink-400 hover:text-pink-700'
-                    ],
-                    'Fisioterapia' => [
+                    'Área da Saúde' => [
                         'dot' => 'bg-teal-500',
                         'badge' => 'bg-teal-100 text-teal-700 dark:bg-teal-800 dark:text-teal-200',
                         'link' => 'text-teal-600 dark:text-teal-400 hover:text-teal-700'
                     ],
-                    'Enfermagem' => [
-                        'dot' => 'bg-sky-500',
-                        'badge' => 'bg-sky-100 text-sky-700 dark:bg-sky-800 dark:text-sky-200',
-                        'link' => 'text-sky-600 dark:text-sky-400 hover:text-sky-700'
+                    'Tecnologia e TI' => [
+                        'dot' => 'bg-cyan-500',
+                        'badge' => 'bg-cyan-100 text-cyan-700 dark:bg-cyan-800 dark:text-cyan-200',
+                        'link' => 'text-cyan-600 dark:text-cyan-400 hover:text-cyan-700'
                     ],
-                    'Geral' => [
+                    'Conteúdos Gerais' => [
                         'dot' => 'bg-gray-500',
                         'badge' => 'bg-gray-200 text-gray-700 dark:bg-gray-700 dark:text-gray-200',
                         'link' => 'text-gray-600 dark:text-gray-400 hover:text-gray-700'
@@ -265,7 +232,7 @@
     </div>
 
     <!-- Aba: Novidades -->
-    <div x-show="activeTab === 'novos'" x-cloak>
+    <div x-show="activeTab === 'novos'" x-cloak style="display: none;">
         @if($newBooks->isEmpty())
             <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm p-12 text-center">
                 <div class="w-16 h-16 mx-auto mb-4 bg-gray-100 dark:bg-gray-700 rounded-full flex items-center justify-center">

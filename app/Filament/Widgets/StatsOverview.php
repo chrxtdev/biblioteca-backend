@@ -45,10 +45,9 @@ class StatsOverview extends BaseWidget
                 ->descriptionIcon('heroicon-m-book-open')
                 ->color('info')
                 ->chart($last7Days)
+                ->url($booksUrl)
                 ->extraAttributes([
-                    'class' => 'cursor-pointer hover:scale-[1.02] transition-transform ring-2 ring-sky-500/20',
-                    'wire:click' => "redirectToUrl('{$booksUrl}')",
-                    'onclick' => "window.location.href='{$booksUrl}'",
+                    'class' => 'hover:scale-[1.02] transition-transform ring-2 ring-sky-500/20',
                 ]),
 
             Stat::make('⏳ Pendentes', $pendingCount)
@@ -56,9 +55,9 @@ class StatsOverview extends BaseWidget
                 ->descriptionIcon('heroicon-m-clock')
                 ->color($pendingCount > 0 ? 'warning' : 'success')
                 ->chart([7, 3, 4, 5, 6, 3, $pendingCount])
+                ->url($pendingUrl)
                 ->extraAttributes([
-                    'class' => 'cursor-pointer hover:scale-[1.02] transition-transform ' . ($pendingCount > 0 ? 'ring-2 ring-amber-500/30 animate-pulse' : ''),
-                    'onclick' => "window.location.href='{$pendingUrl}'",
+                    'class' => 'hover:scale-[1.02] transition-transform ' . ($pendingCount > 0 ? 'ring-2 ring-amber-500/30 animate-pulse' : ''),
                 ]),
 
             Stat::make('✅ Aprovados', $approvedCount)
@@ -66,18 +65,18 @@ class StatsOverview extends BaseWidget
                 ->descriptionIcon('heroicon-m-check-badge')
                 ->color('success')
                 ->chart($approvedLast7Days)
+                ->url($approvedUrl)
                 ->extraAttributes([
-                    'class' => 'cursor-pointer hover:scale-[1.02] transition-transform ring-2 ring-emerald-500/20',
-                    'onclick' => "window.location.href='{$approvedUrl}'",
+                    'class' => 'hover:scale-[1.02] transition-transform ring-2 ring-emerald-500/20',
                 ]),
                 
             Stat::make('❌ Rejeitados', $rejectedCount)
                 ->description('Precisam de correção')
                 ->descriptionIcon('heroicon-m-x-circle')
                 ->color('danger')
+                ->url($rejectedUrl)
                 ->extraAttributes([
-                    'class' => 'cursor-pointer hover:scale-[1.02] transition-transform ring-2 ring-rose-500/20',
-                    'onclick' => "window.location.href='{$rejectedUrl}'",
+                    'class' => 'hover:scale-[1.02] transition-transform ring-2 ring-rose-500/20',
                 ]),
         ];
     }

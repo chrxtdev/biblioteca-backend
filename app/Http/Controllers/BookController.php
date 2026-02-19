@@ -32,11 +32,8 @@ class BookController extends Controller
             'books' => $this->bookService->getVerifiedBooks($search, $course, $perPage),
             'booksByCourse' => $showShowcase ? $this->bookService->getBooksByCourse() : collect(),
             'newBooks' => $this->bookService->getNewBooks(),
-            'myBooks' => $user->books()->latest()->paginate(5, ['*'], 'my_page'),
             'search' => $search,
             'course' => $course,
-            'readingProgress' => $user->readingProgress,
-            'favoriteBookIds' => $user->favoriteBooks()->pluck('books.id')->toArray(),
         ]);
     }
 
@@ -48,26 +45,11 @@ class BookController extends Controller
     {
         $validated = $request->validated();
 
-        // Upload do PDF
-        $pdfPath = $request->file('file_path')->store('livros_pdfs', 'public');
-
-        // Upload da capa (opcional)
-        $coverPath = $request->hasFile('cover_path')
-            ? $request->file('cover_path')->store('livros_capas', 'public')
-            : null;
-
-        // Cria o livro com total_pages = null (será processado em background)
-        $book = Book::create([
-            'title' => $validated['title'],
-            'author' => $validated['author'],
-            'description' => $validated['description'] ?? null,
-            'course' => $validated['course'],
-            'file_path' => $pdfPath,
-            'cover_path' => $coverPath,
-            'user_id' => Auth::id(),
-            'is_verified' => false,
-            'total_pages' => null, // Será preenchido pelo Job
-        ]);
+        $book = $this->bookService->createBook(
+            $validated,
+            $request->file('file_path'),
+            $request->file('cover_path')
+        );
 
         // Dispara o job para processar o PDF em background
         ProcessBookPdfJob::dispatch($book);

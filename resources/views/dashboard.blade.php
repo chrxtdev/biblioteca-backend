@@ -14,8 +14,12 @@
         <!-- Sidebar (Sticky via próprio CSS) -->
         @include('dashboard.partials.sidebar')
 
-        <!-- Conteúdo Principal ou Favoritos (scroll normal do body) -->
-        <div class="flex-1 min-w-0">
+        <script>
+            window.initialFavoriteBookIds = @json($favoriteBookIds ?? []);
+        </script>
+
+        <!-- Conteúdo Principal ou Favoritos (anti-FOUC: hidden until CSS loads) -->
+        <div class="flex-1 min-w-0" id="main-content-area" style="visibility:hidden">
             @if(request()->routeIs('favorites.index'))
                 @include('dashboard.favorites', [
                     'books' => $books,
@@ -45,8 +49,24 @@
 
         <!-- Modais -->
         @include('dashboard.partials.modal-create')
+        @include('dashboard.partials.modal-book-details')
         @include('dashboard.partials.modal-reader')
         @include('dashboard.partials.modal-submissions')
 
     </div>
+
+    <!-- Anti-FOUC: revela conteúdo principal após CSS carregar -->
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            requestAnimationFrame(function() {
+                var el = document.getElementById('main-content-area');
+                if (el) el.style.visibility = 'visible';
+            });
+        });
+        // Fallback de segurança
+        setTimeout(function() {
+            var el = document.getElementById('main-content-area');
+            if (el) el.style.visibility = 'visible';
+        }, 2000);
+    </script>
 </x-app-layout>

@@ -5,7 +5,13 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="csrf-token" content="{{ csrf_token() }}">
 
-    <title>{{ config('app.name', 'Laravel') }}</title>
+    <meta name="description" content="@yield('meta_description', 'Acesso à Biblioteca Digital da Unicentro. Login, cadastro e recuperação de senha.')">
+    <meta property="og:title" content="@yield('title', config('app.name'))">
+    <meta property="og:description" content="@yield('meta_description', 'Acesso à Biblioteca Digital da Unicentro.')">
+    <meta property="og:image" content="{{ asset('images/unicentro-logo-new.png') }}">
+    <meta property="twitter:card" content="summary_large_image">
+
+    <title>@yield('title', config('app.name', 'Laravel'))</title>
 
     <!-- Fonts -->
     <link rel="preconnect" href="https://fonts.bunny.net">
@@ -38,14 +44,14 @@
 
         <!-- Lado Direito - Imagem (Apenas Desktop) -->
         <div class="hidden lg:block relative w-0 flex-1">
-            <img class="absolute inset-0 h-full w-full object-cover" src="{{ asset('images/auth-hero.png') }}" alt="Campus Unicentro">
+            <img class="absolute inset-0 h-full w-full object-cover" src="{{ asset('images/auth-hero.png') }}" alt="Campus Unicentro" width="1920" height="1080">
             
             <!-- Overlay Gradiente com cores da marca -->
             <div class="absolute inset-0 bg-gradient-to-br from-blue-900/80 via-blue-800/60 to-teal-700/50 mix-blend-multiply"></div>
             
             <!-- Texto/Logo sobre a imagem -->
             <div class="absolute inset-0 flex flex-col justify-center items-center text-white p-12 text-center pointer-events-none">
-                <img class="h-32 w-auto mb-8 drop-shadow-lg" src="{{ asset('images/unicentro-logo-new.png') }}" alt="Unicentro">
+                <img class="h-32 w-auto mb-8 drop-shadow-lg" src="{{ asset('images/unicentro-logo-new.png') }}" alt="Unicentro" width="128" height="128">
                 <h2 class="text-4xl font-bold mb-4 drop-shadow-md">Bem-vindo à Biblioteca Digital</h2>
                 <p class="text-lg text-blue-100 max-w-lg drop-shadow">
                     Acesso ilimitado ao conhecimento. Explore, pesquise e aprenda com nosso vasto acervo digital.

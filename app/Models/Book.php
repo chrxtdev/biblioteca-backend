@@ -24,16 +24,15 @@ class Book extends Model
         'total_pages',
     ];
 
-    const COURSES = [
-        'Engenharia Civil' => 'Engenharia Civil',
-        'Direito' => 'Direito',
-        'Enfermagem' => 'Enfermagem',
-        'Administração' => 'Administração',
-        'Psicologia' => 'Psicologia',
-        'Serviço Social' => 'Serviço Social',
-        'Fisioterapia' => 'Fisioterapia',
-        'Geral' => 'Geral / Outros',
-    ];
+    // protected $casts = [
+    //    'course' => \App\Enums\Course::class,
+    // ];
+
+    // Mantendo por compatibilidade se necessário, mas idealmente usar Enum
+    public static function getCoursesOptions(): array
+    {
+        return \App\Enums\Course::options();
+    }
 
     public function user()
     {

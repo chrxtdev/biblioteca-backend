@@ -65,7 +65,8 @@
                 <!-- Navegação de Páginas -->
                 <div class="flex items-center gap-1 bg-gray-100 dark:bg-gray-700 rounded-full px-2 py-1" x-show="viewMode !== 'scroll'">
                     <button @click="goToPrevPage()" :disabled="pageNum <= 1" 
-                        class="p-1.5 rounded-full hover:bg-gray-200 dark:hover:bg-gray-600 disabled:opacity-40 disabled:cursor-not-allowed transition-colors">
+                        class="p-1.5 rounded-full hover:bg-gray-200 dark:hover:bg-gray-600 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+                        title="Página Anterior (Seta Esquerda)">
                         <svg class="w-4 h-4 text-gray-600 dark:text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path></svg>
                     </button>
                     
@@ -78,7 +79,8 @@
                     </div>
                     
                     <button @click="goToNextPage()" :disabled="pageNum >= totalPages" 
-                        class="p-1.5 rounded-full hover:bg-gray-200 dark:hover:bg-gray-600 disabled:opacity-40 disabled:cursor-not-allowed transition-colors">
+                        class="p-1.5 rounded-full hover:bg-gray-200 dark:hover:bg-gray-600 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+                        title="Próxima Página (Seta Direita)">
                         <svg class="w-4 h-4 text-gray-600 dark:text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path></svg>
                     </button>
                 </div>
@@ -131,20 +133,53 @@
             </div>
         </header>
 
-        <!-- Corpo do Modal (Canvas do PDF) -->
-        <div class="flex-1 overflow-auto bg-gray-200 dark:bg-gray-900 relative" id="pdf-container"
-             @scroll="handlePdfScroll($event)">
-            <!-- Loader -->
-            <div x-show="loading" class="absolute inset-0 flex flex-col items-center justify-center bg-white/80 dark:bg-gray-900/80 z-10">
+        <!-- Corpo do Modal (Wrapper Relativo) -->
+        <div class="flex-1 relative overflow-hidden bg-gray-200 dark:bg-gray-900 group/player">
+            
+            <!-- Container do PDF (Scrollable) -->
+            <div class="absolute inset-0 overflow-auto" id="pdf-container" @scroll="handlePdfScroll($event)">
+                <!-- Container das Páginas (modo single/double) -->
+                <div x-show="viewMode !== 'scroll'" class="min-h-full flex items-center justify-center p-6">
+                    <div class="flex gap-4">
+                        <canvas id="pdf-canvas" class="shadow-2xl rounded-lg bg-white max-w-full transition-transform origin-top duration-200"></canvas>
+                        <canvas id="pdf-canvas-2" x-show="viewMode === 'double'" class="shadow-2xl rounded-lg bg-white max-w-full transition-transform origin-top duration-200"></canvas>
+                    </div>
+                </div>
+
+                <!-- Container do Scroll Contínuo -->
+                <div x-show="viewMode === 'scroll'" class="flex flex-col items-center gap-4 p-6 origin-top" id="pdf-scroll-container">
+                    <!-- As páginas serão renderizadas aqui dinamicamente -->
+                </div>
+            </div>
+
+            <!-- Navegação Flutuante (Fixa no Wrapper) -->
+            <div x-show="viewMode !== 'scroll' && !loading" class="absolute inset-x-0 top-1/2 -translate-y-1/2 flex justify-between px-4 pointer-events-none z-20">
+                <!-- Anterior -->
+                <button @click="goToPrevPage()" :disabled="pageNum <= 1"
+                        class="p-3 rounded-full bg-white/90 dark:bg-gray-800/90 shadow-lg hover:scale-110 hover:bg-white dark:hover:bg-gray-700 transition-all disabled:opacity-0 text-gray-700 dark:text-gray-200 pointer-events-auto transform backdrop-blur-sm border border-gray-100 dark:border-gray-700"
+                        title="Página Anterior">
+                    <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path></svg>
+                </button>
+                
+                <!-- Próximo -->
+                <button @click="goToNextPage()" :disabled="pageNum >= totalPages"
+                        class="p-3 rounded-full bg-white/90 dark:bg-gray-800/90 shadow-lg hover:scale-110 hover:bg-white dark:hover:bg-gray-700 transition-all disabled:opacity-0 text-gray-700 dark:text-gray-200 pointer-events-auto transform backdrop-blur-sm border border-gray-100 dark:border-gray-700"
+                        title="Próxima Página">
+                    <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path></svg>
+                </button>
+            </div>
+
+            <!-- Loader (Sobreposto fixo) -->
+            <div x-show="loading" class="absolute inset-0 flex flex-col items-center justify-center bg-white/80 dark:bg-gray-900/80 z-30">
                 <svg class="animate-spin h-10 w-10 text-teal-500 mb-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
                     <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
                     <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
                 </svg>
                 <p class="text-gray-600 dark:text-gray-400 text-sm">Carregando página...</p>
             </div>
-            
-            <!-- Erro -->
-            <div x-show="pdfError" class="absolute inset-0 flex flex-col items-center justify-center bg-white dark:bg-gray-900 z-10">
+
+            <!-- Erro (Sobreposto fixo) -->
+            <div x-show="pdfError" class="absolute inset-0 flex flex-col items-center justify-center bg-white dark:bg-gray-900 z-30">
                 <svg class="w-16 h-16 text-red-400 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path>
                 </svg>
@@ -153,19 +188,6 @@
                 <button @click="retryLoadPdf()" class="mt-4 px-4 py-2 bg-gradient-to-r from-green-500 to-teal-600 text-white rounded-lg hover:shadow-lg transition-all">
                     Tentar novamente
                 </button>
-            </div>
-            
-            <!-- Container das Páginas (modo single/double) -->
-            <div x-show="viewMode !== 'scroll'" class="min-h-full flex items-start justify-center p-6">
-                <div class="flex gap-4">
-                    <canvas id="pdf-canvas" class="shadow-2xl rounded-lg bg-white max-w-full"></canvas>
-                    <canvas id="pdf-canvas-2" x-show="viewMode === 'double'" class="shadow-2xl rounded-lg bg-white max-w-full"></canvas>
-                </div>
-            </div>
-
-            <!-- Container do Scroll Contínuo -->
-            <div x-show="viewMode === 'scroll'" class="flex flex-col items-center gap-4 p-6" id="pdf-scroll-container">
-                <!-- As páginas serão renderizadas aqui dinamicamente -->
             </div>
         </div>
 

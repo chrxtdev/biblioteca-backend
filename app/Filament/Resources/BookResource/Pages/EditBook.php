@@ -12,6 +12,11 @@ class EditBook extends EditRecord
 {
     protected static string $resource = BookResource::class;
 
+    public function getTitle(): string
+    {
+        return 'Editar / Inspecionar Livro';
+    }
+
     protected function getHeaderActions(): array
     {
         return [
@@ -79,7 +84,13 @@ class EditBook extends EditRecord
         ];
     }
 
-    private function notify(string $string, string $string1)
+    protected function afterSave(): void
     {
+        $book = $this->record;
+
+        // Se total_pages estiver inválido, tentamos recalcular via Job
+        if (is_null($book->total_pages) || $book->total_pages === 0) {
+            \App\Jobs\ProcessBookPdfJob::dispatch($book);
+        }
     }
 }

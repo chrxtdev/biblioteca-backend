@@ -1,6 +1,6 @@
 <x-layouts.auth-split>
     <div class="mb-8">
-        <h2 class="mt-6 text-3xl font-bold tracking-tight text-gray-900">Bem-vindo de volta! 👋</h2>
+        <h1 class="mt-6 text-3xl font-bold tracking-tight text-gray-900">Bem-vindo de volta! 👋</h1>
         <p class="mt-2 text-sm text-gray-600">
             Por favor, insira seus dados para acessar o sistema.
         </p>

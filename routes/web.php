@@ -24,7 +24,9 @@ require __DIR__ . '/auth.php';
 Route::get('/livros', [BookController::class, 'index'])->name('books.index');
 
 Route::middleware(['auth'])->group(function () {
-    Route::post('/livros', [BookController::class, 'store'])->name('books.store');
+    Route::post('/livros', [BookController::class, 'store'])
+        ->middleware('throttle:uploads')
+        ->name('books.store');
 
     Route::post('/favorites/toggle/{book}', [FavoriteController::class, 'toggleFavorite'])->name('favorites.toggle');
     Route::get('/favorites', [FavoriteController::class, 'index'])->name('favorites.index');
