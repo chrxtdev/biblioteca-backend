@@ -1,26 +1,14 @@
 @props(['book'])
 
 <div x-show="showDetails" 
-     x-transition:enter="transition ease-out duration-300"
-     x-transition:enter-start="opacity-0 scale-95"
-     x-transition:enter-end="opacity-100 scale-100"
-     x-transition:leave="transition ease-in duration-200"
-     x-transition:leave-start="opacity-100 scale-100"
-     x-transition:leave-end="opacity-0 scale-95"
+     x-transition.opacity.duration.300ms
      class="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6"
      style="display: none;"
      @keydown.escape.window="showDetails = false">
 
-    <!-- Backdrop com Blur e Cor Dominante (Simulado) -->
+    <!-- Backdrop -->
     <div @click="showDetails = false" 
-         class="absolute inset-0 bg-black/60 backdrop-blur-sm transition-opacity"
-         x-transition:enter="ease-out duration-300"
-         x-transition:enter-start="opacity-0"
-         x-transition:enter-end="opacity-100"
-         x-transition:leave="ease-in duration-200"
-         x-transition:leave-start="opacity-100"
-         x-transition:leave-end="opacity-0">
-    </div>
+         class="absolute inset-0 bg-black/50 backdrop-blur-sm"></div>
 
     <!-- Modal Content -->
     <div class="relative w-full max-w-4xl bg-white dark:bg-gray-900 rounded-2xl shadow-2xl overflow-hidden flex flex-col md:flex-row max-h-[90vh]">

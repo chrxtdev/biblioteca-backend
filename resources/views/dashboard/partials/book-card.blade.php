@@ -23,7 +23,6 @@
             @endif
         </div>
 
-        {{-- Botão de Favorito (zero Alpine na renderização - 100% server-side) --}}
         <button @click.stop="
             toggleFavorite({{ $book->id }}, $el.classList.contains('bg-red-500')).then(newState => {
                 if(newState) { $el.classList.add('bg-red-500','text-white'); $el.classList.remove('bg-black/30','hover:bg-red-500/80'); }

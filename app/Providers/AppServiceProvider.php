@@ -25,7 +25,6 @@ class AppServiceProvider extends ServiceProvider
         Carbon::setLocale('pt_BR');
 
         \Illuminate\Support\Facades\View::composer('dashboard', \App\View\Composers\DashboardComposer::class);
-        // \Illuminate\Support\Facades\View::composer('dashboard.*', \App\View\Composers\DashboardComposer::class);
 
         // Rate Limiters (Security)
         \Illuminate\Support\Facades\RateLimiter::for('api', function (\Illuminate\Http\Request $request) {

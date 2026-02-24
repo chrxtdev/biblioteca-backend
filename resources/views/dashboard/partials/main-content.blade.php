@@ -49,21 +49,58 @@
         </div>
     </div>
 
-    <!-- Category Filters -->
-    <div class="mb-8 overflow-x-auto pb-4 scrollbar-hide">
-        <div class="flex gap-3">
+    <!-- Category Filters with Arrow Navigation -->
+    <div class="mb-8 relative" x-data="{
+        scrollContainer: null,
+        canScrollLeft: false,
+        canScrollRight: false,
+        init() {
+            this.scrollContainer = this.$refs.categoryScroll;
+            this.checkScroll();
+            this.scrollContainer.addEventListener('scroll', () => this.checkScroll(), { passive: true });
+            new ResizeObserver(() => this.checkScroll()).observe(this.scrollContainer);
+        },
+        checkScroll() {
+            const el = this.scrollContainer;
+            this.canScrollLeft = el.scrollLeft > 5;
+            this.canScrollRight = el.scrollLeft < (el.scrollWidth - el.clientWidth - 5);
+        },
+        scrollBy(dir) {
+            this.scrollContainer.scrollBy({ left: dir * 250, behavior: 'smooth' });
+        }
+    }">
+        <!-- Left Arrow -->
+        <button x-show="canScrollLeft" x-transition:enter="transition ease-out duration-200" x-transition:enter-start="opacity-0" x-transition:enter-end="opacity-100" x-transition:leave="transition ease-in duration-150"
+            @click="scrollBy(-1)"
+            class="absolute left-0 top-1/2 -translate-y-1/2 z-10 w-9 h-9 flex items-center justify-center rounded-full bg-white dark:bg-gray-700 shadow-lg border border-gray-200 dark:border-gray-600 text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-600 transition-colors cursor-pointer" x-cloak>
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path></svg>
+        </button>
+
+        <!-- Scrollable Categories -->
+        <div x-ref="categoryScroll" class="flex gap-3 overflow-x-auto scrollbar-hide scroll-smooth px-1 py-1">
             <a href="{{ route('aluno') }}" 
-               class="whitespace-nowrap px-6 py-2.5 rounded-full font-medium {{ !request('course') && !request('search') ? 'bg-gray-900 text-white shadow-lg' : 'bg-white dark:bg-gray-800 text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700' }}">
+               class="whitespace-nowrap px-6 py-2.5 rounded-full font-medium transition-all duration-200 {{ !request('course') && !request('search') ? 'bg-gray-900 dark:bg-white text-white dark:text-gray-900 shadow-lg' : 'bg-white dark:bg-gray-800 text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 border border-gray-200 dark:border-gray-700' }}">
                 Todas as Áreas
             </a>
             
             @foreach(\App\Enums\Course::values() as $courseName)
                 <a href="{{ route('aluno', ['course' => $courseName]) }}"
-                   class="whitespace-nowrap px-6 py-2.5 rounded-full font-medium {{ request('course') === $courseName ? 'bg-teal-500 text-white shadow-lg' : 'bg-white dark:bg-gray-800 text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700' }}">
+                   class="whitespace-nowrap px-6 py-2.5 rounded-full font-medium transition-all duration-200 {{ request('course') === $courseName ? 'bg-teal-500 text-white shadow-lg' : 'bg-white dark:bg-gray-800 text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 border border-gray-200 dark:border-gray-700' }}">
                    {{ $courseName }}
                 </a>
             @endforeach
         </div>
+
+        <!-- Right Arrow -->
+        <button x-show="canScrollRight" x-transition:enter="transition ease-out duration-200" x-transition:enter-start="opacity-0" x-transition:enter-end="opacity-100" x-transition:leave="transition ease-in duration-150"
+            @click="scrollBy(1)"
+            class="absolute right-0 top-1/2 -translate-y-1/2 z-10 w-9 h-9 flex items-center justify-center rounded-full bg-white dark:bg-gray-700 shadow-lg border border-gray-200 dark:border-gray-600 text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-600 transition-colors cursor-pointer" x-cloak>
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path></svg>
+        </button>
+
+        <!-- Gradient masks for visual hint -->
+        <div x-show="canScrollLeft" class="absolute left-8 top-0 bottom-0 w-8 bg-gradient-to-r from-gray-100 dark:from-gray-900 to-transparent pointer-events-none z-[5]" x-cloak></div>
+        <div x-show="canScrollRight" class="absolute right-8 top-0 bottom-0 w-8 bg-gradient-to-l from-gray-100 dark:from-gray-900 to-transparent pointer-events-none z-[5]" x-cloak></div>
     </div>
 
     <!-- Aba: Todos os Livros -->
@@ -213,17 +250,57 @@
                             </a>
                         </div>
 
-                        {{-- Grid de Livros (máximo 5 por curso) --}}
-                        <div class="p-6">
-                            <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
-                                @foreach($courseBooks->take(5) as $book)
-                                    @include('dashboard.partials.book-card', [
-                                        'book' => $book,
-                                        'readingProgress' => $readingProgress,
-                                        'favoriteBookIds' => $favoriteBookIds
-                                    ])
+                        {{-- Carrossel Horizontal de Livros --}}
+                        <div class="relative group/carousel" x-data="{
+                            container: null,
+                            canLeft: false,
+                            canRight: false,
+                            init() {
+                                this.container = this.$refs.bookScroll;
+                                this.check();
+                                this.container.addEventListener('scroll', () => this.check(), { passive: true });
+                                new ResizeObserver(() => this.check()).observe(this.container);
+                            },
+                            check() {
+                                const el = this.container;
+                                this.canLeft = el.scrollLeft > 5;
+                                this.canRight = el.scrollLeft < (el.scrollWidth - el.clientWidth - 5);
+                            },
+                            scroll(dir) {
+                                const cardWidth = this.container.querySelector('.book-carousel-item')?.offsetWidth || 200;
+                                this.container.scrollBy({ left: dir * (cardWidth * 2 + 32), behavior: 'smooth' });
+                            }
+                        }">
+                            {{-- Left Arrow --}}
+                            <button x-show="canLeft" x-transition
+                                @click="scroll(-1)"
+                                class="absolute left-2 top-1/2 -translate-y-1/2 z-10 w-10 h-10 flex items-center justify-center rounded-full bg-white/95 dark:bg-gray-700/95 shadow-xl border border-gray-200 dark:border-gray-600 text-gray-700 dark:text-gray-200 hover:bg-white dark:hover:bg-gray-600 hover:scale-110 transition-all cursor-pointer backdrop-blur-sm" x-cloak>
+                                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M15 19l-7-7 7-7"></path></svg>
+                            </button>
+
+                            {{-- Scrollable Book Strip --}}
+                            <div x-ref="bookScroll" class="flex gap-4 overflow-x-auto scrollbar-hide scroll-smooth px-6 py-5">
+                                @foreach($courseBooks as $book)
+                                    <div class="book-carousel-item flex-shrink-0 w-40 sm:w-44 md:w-48">
+                                        @include('dashboard.partials.book-card', [
+                                            'book' => $book,
+                                            'readingProgress' => $readingProgress,
+                                            'favoriteBookIds' => $favoriteBookIds
+                                        ])
+                                    </div>
                                 @endforeach
                             </div>
+
+                            {{-- Right Arrow --}}
+                            <button x-show="canRight" x-transition
+                                @click="scroll(1)"
+                                class="absolute right-2 top-1/2 -translate-y-1/2 z-10 w-10 h-10 flex items-center justify-center rounded-full bg-white/95 dark:bg-gray-700/95 shadow-xl border border-gray-200 dark:border-gray-600 text-gray-700 dark:text-gray-200 hover:bg-white dark:hover:bg-gray-600 hover:scale-110 transition-all cursor-pointer backdrop-blur-sm" x-cloak>
+                                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M9 5l7 7-7 7"></path></svg>
+                            </button>
+
+                            {{-- Gradient Fade Edges --}}
+                            <div x-show="canLeft" class="absolute left-0 top-0 bottom-0 w-12 bg-gradient-to-r from-white dark:from-gray-800 to-transparent pointer-events-none z-[5] rounded-l-xl" x-cloak></div>
+                            <div x-show="canRight" class="absolute right-0 top-0 bottom-0 w-12 bg-gradient-to-l from-white dark:from-gray-800 to-transparent pointer-events-none z-[5] rounded-r-xl" x-cloak></div>
                         </div>
                     </div>
                 @endforeach

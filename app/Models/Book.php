@@ -24,15 +24,7 @@ class Book extends Model
         'total_pages',
     ];
 
-    // protected $casts = [
-    //    'course' => \App\Enums\Course::class,
-    // ];
 
-    // Mantendo por compatibilidade se necessário, mas idealmente usar Enum
-    public static function getCoursesOptions(): array
-    {
-        return \App\Enums\Course::options();
-    }
 
     public function user()
     {

@@ -21,8 +21,6 @@ Route::middleware('auth')->group(function () {
 
 require __DIR__ . '/auth.php';
 
-Route::get('/livros', [BookController::class, 'index'])->name('books.index');
-
 Route::middleware(['auth'])->group(function () {
     Route::post('/livros', [BookController::class, 'store'])
         ->middleware('throttle:uploads')

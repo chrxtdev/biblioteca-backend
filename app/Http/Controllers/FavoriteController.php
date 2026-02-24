@@ -6,8 +6,20 @@ use App\Models\Book;
 use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
 
+/**
+ * Gerencia os favoritos do usuário.
+ *
+ * Permite ao aluno marcar/desmarcar livros como favoritos
+ * e listar sua coleção pessoal com filtros por curso.
+ */
 class FavoriteController extends Controller
 {
+    /**
+     * Alterna o estado de favorito de um livro para o usuário autenticado.
+     *
+     * Usa a relação BelongsToMany com toggle() para add/remove em uma única chamada.
+     * Retorna o estado atualizado para que o frontend sincronize a UI.
+     */
     public function toggleFavorite(Request $request, Book $book): JsonResponse
     {
         $user = $request->user();
@@ -21,19 +33,23 @@ class FavoriteController extends Controller
         ]);
     }
 
+    /**
+     * Lista os livros favoritos do usuário autenticado.
+     *
+     * Quando nenhum filtro de curso é aplicado, agrupa os livros por curso
+     * para exibição no formato vitrine (carrossel por categoria).
+     * Também injeta dados auxiliares necessários para o dashboard.
+     */
     public function index(Request $request)
     {
         $user = $request->user();
         $course = $request->input('course');
 
-        // Começa a query com os livros favoritos do usuário
         $favoriteBooksQuery = $user->favoriteBooks();
 
-        // Aplica o filtro de curso, se existir
         if ($course) {
             if ($course === 'Outros') {
-                $mainCourses = ['Engenharia Civil', 'Direito', 'Administração', 'Psicologia', 'Serviço Social', 'Fisioterapia', 'Enfermagem'];
-                $favoriteBooksQuery->whereNotIn('course', $mainCourses);
+                $favoriteBooksQuery->whereNotIn('course', \App\Enums\Course::values());
             } else {
                 $favoriteBooksQuery->where('course', $course);
             }
@@ -41,27 +57,17 @@ class FavoriteController extends Controller
 
         $favoriteBooks = $favoriteBooksQuery->with('user')->orderBy('pivot_created_at', 'desc')->get();
 
-        // Agrupar livros favoritos por curso (vitrine)
-        $booksByCourse = collect();
-        if (!$course) {
-            $booksByCourse = $favoriteBooks->groupBy('course');
-        }
-
-        $favoriteBookIds = $favoriteBooks->pluck('id')->toArray();
-        $readingProgress = $user->readingProgress()->get();
-
-        // **CORREÇÃO:** Busca os livros enviados pelo usuário
-        $myBooks = $user->books()->orderBy('created_at', 'desc')->paginate(5, ['*'], 'my_page');
+        $booksByCourse = !$course ? $favoriteBooks->groupBy('course') : collect();
 
         return view('dashboard', [
             'books' => $favoriteBooks,
             'booksByCourse' => $booksByCourse,
-            'newBooks' => collect(), // Não há "novos" na pág de favoritos
-            'myBooks' => $myBooks, // Passa os livros enviados
-            'search' => '', // Não há busca na pág de favoritos
+            'newBooks' => collect(),
+            'myBooks' => $user->books()->latest()->paginate(5, ['*'], 'my_page'),
+            'search' => '',
             'course' => $course,
-            'readingProgress' => $readingProgress,
-            'favoriteBookIds' => $favoriteBookIds,
+            'readingProgress' => $user->readingProgress()->get(),
+            'favoriteBookIds' => $favoriteBooks->pluck('id')->toArray(),
         ]);
     }
 }

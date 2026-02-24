@@ -19,11 +19,14 @@ class ReadingProgress extends Model
         'progress_percentage',
         'last_read_at',
         'is_completed',
+        'view_mode',
+        'pdf_scale',
     ];
 
     protected $casts = [
         'last_read_at' => 'datetime',
         'is_completed' => 'boolean',
+        'pdf_scale' => 'float',
     ];
 
     public function user()

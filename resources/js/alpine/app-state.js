@@ -1,5 +1,11 @@
 const renderTasks = {}; // Store active render tasks outside Alpine to avoid Proxy issues
 
+// Render queue system for controlled concurrency
+const MAX_CONCURRENT_RENDERS = 3;
+let activeRenders = 0;
+let renderQueue = [];
+let pageHeightCache = 0; // Cached page height for O(1) scroll calculations
+
 export default () => ({
     // Estado Geral da UI
     isLoaded: true, // Já inicia carregado pois o script inline resolveu o flicker
@@ -119,10 +125,19 @@ export default () => ({
         this.viewMode = 'single';
         this.isFullscreen = false;
 
+        // Restore saved preferences (page, viewMode, zoom)
         try {
-            const progress = await fetch(`/api/reading-progress/${book.id}`).then(res => res.json());
-            if (progress.progress && progress.progress.current_page > 1) {
-                this.pageNum = progress.progress.current_page;
+            const res = await fetch(`/api/reading-progress/${book.id}`).then(r => r.json());
+            if (res.progress) {
+                if (res.progress.current_page > 1) {
+                    this.pageNum = res.progress.current_page;
+                }
+                if (res.progress.view_mode && ['single', 'double', 'scroll'].includes(res.progress.view_mode)) {
+                    this.viewMode = res.progress.view_mode;
+                }
+                if (res.progress.pdf_scale && res.progress.pdf_scale >= 0.5 && res.progress.pdf_scale <= 3.0) {
+                    this.pdfScale = parseFloat(res.progress.pdf_scale);
+                }
             }
         } catch (e) { console.error("Erro ao buscar progresso:", e); }
 
@@ -139,6 +154,22 @@ export default () => ({
         if (document.fullscreenElement) {
             document.exitFullscreen();
         }
+
+        // Clean up observer
+        if (this.pageObserver) {
+            this.pageObserver.disconnect();
+            this.pageObserver = null;
+        }
+
+        // Cancel all active renders and clear queue
+        Object.keys(renderTasks).forEach(key => {
+            if (renderTasks[key]) {
+                renderTasks[key].cancel();
+                delete renderTasks[key];
+            }
+        });
+        renderQueue = [];
+        activeRenders = 0;
 
         this.showReader = false;
         window._pdfState.doc = null;
@@ -200,18 +231,23 @@ export default () => ({
                 delete renderTasks['pdf-canvas'];
             }
 
-            // Renderiza página principal
+            // Renderiza página principal com suporte a HiDPI
             const page = await pdfDoc.getPage(num);
             const canvas = document.getElementById('pdf-canvas');
             if (!canvas) {
                 throw new Error("Canvas não encontrado");
             }
             const ctx = canvas.getContext('2d');
+            const dpr = window.devicePixelRatio || 1;
             const viewport = page.getViewport({ scale: this.pdfScale });
-            canvas.height = viewport.height;
-            canvas.width = viewport.width;
 
-            // Store new task
+            // Canvas interno em resolução HiDPI, visual no tamanho CSS
+            canvas.width = Math.round(viewport.width * dpr);
+            canvas.height = Math.round(viewport.height * dpr);
+            canvas.style.width = `${Math.round(viewport.width)}px`;
+            canvas.style.height = `${Math.round(viewport.height)}px`;
+            ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+
             const renderTask = page.render({ canvasContext: ctx, viewport: viewport });
             renderTasks['pdf-canvas'] = renderTask;
 
@@ -234,8 +270,11 @@ export default () => ({
                 if (canvas2) {
                     const ctx2 = canvas2.getContext('2d');
                     const viewport2 = page2.getViewport({ scale: this.pdfScale });
-                    canvas2.height = viewport2.height;
-                    canvas2.width = viewport2.width;
+                    canvas2.width = Math.round(viewport2.width * dpr);
+                    canvas2.height = Math.round(viewport2.height * dpr);
+                    canvas2.style.width = `${Math.round(viewport2.width)}px`;
+                    canvas2.style.height = `${Math.round(viewport2.height)}px`;
+                    ctx2.setTransform(dpr, 0, 0, dpr, 0, 0);
 
                     const renderTask2 = page2.render({ canvasContext: ctx2, viewport: viewport2 });
                     renderTasks['pdf-canvas-2'] = renderTask2;
@@ -266,6 +305,41 @@ export default () => ({
         }
     },
 
+    // --- Render Queue System ---
+    enqueueRender(wrapper, pageNum) {
+        // Don't add duplicates
+        if (renderQueue.some(item => item.pageNum === pageNum)) return;
+
+        renderQueue.push({ wrapper, pageNum });
+        // Sort by distance from current page (closer = higher priority)
+        renderQueue.sort((a, b) => Math.abs(a.pageNum - this.pageNum) - Math.abs(b.pageNum - this.pageNum));
+        this.processRenderQueue();
+    },
+
+    dequeueRender(pageNum) {
+        renderQueue = renderQueue.filter(item => item.pageNum !== pageNum);
+    },
+
+    async processRenderQueue() {
+        while (renderQueue.length > 0 && activeRenders < MAX_CONCURRENT_RENDERS) {
+            const item = renderQueue.shift();
+            if (!item) break;
+
+            // Skip if wrapper was removed from DOM or already rendered
+            if (!item.wrapper.isConnected) continue;
+            const canvas = item.wrapper.querySelector('canvas');
+            if (canvas && canvas.dataset.rendered === 'true') continue;
+
+            activeRenders++;
+            // Fire and forget — don't await, let multiple run concurrently
+            this.renderSinglePageOnScroll(item.wrapper, item.pageNum).finally(() => {
+                activeRenders--;
+                // Process next in queue after one finishes
+                this.processRenderQueue();
+            });
+        }
+    },
+
     async renderAllPages() {
         const pdfDoc = window._pdfState.doc;
         if (!pdfDoc) return;
@@ -274,174 +348,191 @@ export default () => ({
         const container = document.getElementById('pdf-scroll-container');
         if (!container) return;
 
-        // Limpa observer anterior
+        // Clean up previous state
         if (this.pageObserver) {
             this.pageObserver.disconnect();
             this.pageObserver = null;
         }
 
-        container.innerHTML = '';
-        window._pdfState.renderedPages = [];
-
-        // Cancel all active render tasks to prevent writing to detached DOM elements
+        // Cancel all active render tasks
         Object.keys(renderTasks).forEach(key => {
             if (renderTasks[key]) {
                 renderTasks[key].cancel();
                 delete renderTasks[key];
             }
         });
+        renderQueue = [];
+        activeRenders = 0;
 
-        // Limpa timeouts de renderização pendentes (se houver referências)
-        // Nota: Os timeouts estão atrelados aos elementos canvas que serão removidos via innerHTML = '',
-        // mas é boa prática garantir que não disparem erros.
-        // Como não temos lista global de timeouts, confiamos que o innerHTML remove os targets.
+        container.innerHTML = '';
+        window._pdfState.renderedPages = [];
 
         try {
+            // Get first page dimensions for placeholders
             const page1 = await pdfDoc.getPage(1);
             const viewport1 = page1.getViewport({ scale: this.pdfScale });
+            const pageWidth = Math.round(viewport1.width);
+            const pageHeight = Math.round(viewport1.height);
+            const gap = 24; // mb-6 = 1.5rem = 24px
+            pageHeightCache = pageHeight + gap;
 
-            // Configura IntersectionObserver
+            // Build ALL placeholders at once via DocumentFragment (single reflow)
+            const fragment = document.createDocumentFragment();
+
+            for (let i = 1; i <= pdfDoc.numPages; i++) {
+                const wrapper = document.createElement('div');
+                wrapper.id = `pdf-page-${i}`;
+                wrapper.dataset.page = i;
+                wrapper.className = 'pdf-page-wrapper shadow-2xl rounded-lg bg-white mb-6 mx-auto relative';
+                wrapper.style.width = `${pageWidth}px`;
+                wrapper.style.height = `${pageHeight}px`;
+                wrapper.style.display = 'block';
+                wrapper.style.overflow = 'hidden';
+
+                // Lightweight placeholder with page number
+                wrapper.innerHTML = `<div class="absolute inset-0 flex items-center justify-center">
+                    <svg class="w-8 h-8 text-gray-300 dark:text-gray-600 animate-spin" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path></svg>
+                </div>`;
+
+                fragment.appendChild(wrapper);
+            }
+
+            container.appendChild(fragment);
+
+            // Root MUST be the scrollable parent (#pdf-container), not this non-scrolling child
+            const scrollRoot = document.getElementById('pdf-container');
             this.pageObserver = new IntersectionObserver((entries) => {
                 entries.forEach(entry => {
-                    const canvas = entry.target;
-                    const pageNum = parseInt(canvas.dataset.page);
+                    const wrapper = entry.target;
+                    const pageNum = parseInt(wrapper.dataset.page);
 
                     if (entry.isIntersecting) {
-                        // DEBOUNCE: Só renderiza se a página ficar visível por 200ms
-                        // Isso evita travar o browser ao rolar muito rápido
-                        canvas.renderTimeout = setTimeout(() => {
-                            this.renderSinglePageOnScroll(canvas, pageNum);
-                        }, 200);
+                        this.enqueueRender(wrapper, pageNum);
                     } else {
-                        // Se saiu da tela antes de renderizar, cancela o timeout
-                        if (canvas.renderTimeout) {
-                            clearTimeout(canvas.renderTimeout);
-                            delete canvas.renderTimeout;
-                        }
-
-                        // UNLOAD: Limpa memória se a página sair da tela (Virtual List)
-                        this.unloadPage(canvas);
+                        this.dequeueRender(pageNum);
+                        this.unloadPage(wrapper);
                     }
                 });
             }, {
-                root: container,
-                rootMargin: '2500px', // Aumentado um pouco mais para dar gordura
+                root: scrollRoot,
+                rootMargin: '800px',
                 threshold: 0
             });
 
-            // Cria Placeholders instantaneamente
-            for (let i = 1; i <= pdfDoc.numPages; i++) {
-                const canvas = document.createElement('canvas');
-                canvas.id = `pdf-page-${i}`;
-                canvas.className = 'shadow-2xl rounded-lg bg-white mb-6 mx-auto';
-                canvas.dataset.page = i;
+            // Observe all wrappers
+            const wrappers = container.querySelectorAll('.pdf-page-wrapper');
+            wrappers.forEach(w => this.pageObserver.observe(w));
 
-                // Define tamanho inicial para a barra de rolagem funcionar
-                canvas.width = viewport1.width;
-                canvas.height = viewport1.height;
-                canvas.style.width = `${viewport1.width}px`;
-                canvas.style.height = `${viewport1.height}px`;
-                canvas.style.display = 'block';
+            this.loading = false;
 
-                container.appendChild(canvas);
-                this.pageObserver.observe(canvas);
-            }
-
-            this.loading = false; // Libera UI imediatamente
-
-            // Restaura a posição da página atual
-            setTimeout(() => {
+            // Restore scroll position and force-render current page
+            // Flag prevents handlePdfScroll from saving intermediate positions during restore
+            this._isRestoring = true;
+            requestAnimationFrame(() => {
                 this.goToPage(this.pageNum);
-                // Força renderização da página atual imediatamente para evitar "branco" inicial
-                const currentCanvas = document.getElementById(`pdf-page-${this.pageNum}`);
-                if (currentCanvas) {
-                    this.renderSinglePageOnScroll(currentCanvas, this.pageNum);
+                const currentWrapper = document.getElementById(`pdf-page-${this.pageNum}`);
+                if (currentWrapper) {
+                    this.renderSinglePageOnScroll(currentWrapper, this.pageNum);
                 }
-            }, 100);
+                // Release after scroll animation settles
+                setTimeout(() => { this._isRestoring = false; }, 600);
+            });
 
         } catch (error) {
-            console.error("Erro lazy load:", error);
+            console.error('Erro lazy load:', error);
             this.loading = false;
             this.pdfError = error.message;
         }
     },
 
-    async renderSinglePageOnScroll(canvas, pageNum) {
-        // console.log(`Tentando renderizar página ${pageNum}...`, { rendered: canvas.dataset.rendered, rendering: canvas.dataset.rendering });
-        if (canvas.dataset.rendered === "true") return;
+    async renderSinglePageOnScroll(wrapper, pageNum) {
+        let canvas = wrapper.querySelector('canvas');
 
-        // Se já estiver renderizando, não inicia outra tarefa, MAS verifica se a tarefa existe
-        if (canvas.dataset.rendering === "true") {
-            // Se não existe tarefa ativa mas está marcado como rendering, é um estado inválido -> limpa
-            if (!renderTasks[canvas.id]) {
-                delete canvas.dataset.rendering;
-            } else {
-                return;
-            }
+        // Already rendered
+        if (canvas && canvas.dataset.rendered === 'true') return;
+
+        // Already rendering — verify task is still active
+        if (wrapper.dataset.rendering === 'true') {
+            const canvasId = `pdf-canvas-scroll-${pageNum}`;
+            if (renderTasks[canvasId]) return; // Legit in-progress
+            delete wrapper.dataset.rendering; // Stale state, allow retry
         }
 
-        canvas.dataset.rendering = "true";
+        wrapper.dataset.rendering = 'true';
 
         try {
             const pdfDoc = window._pdfState.doc;
+            if (!pdfDoc) return;
+
             const page = await pdfDoc.getPage(pageNum);
-            const ctx = canvas.getContext('2d');
+            const dpr = window.devicePixelRatio || 1;
             const viewport = page.getViewport({ scale: this.pdfScale });
+            const w = Math.round(viewport.width);
+            const h = Math.round(viewport.height);
 
-            // Ajusta tamanho se for diferente da pág 1
-            if (canvas.width !== viewport.width || canvas.height !== viewport.height) {
-                canvas.width = viewport.width;
-                canvas.height = viewport.height;
-                canvas.style.width = `${viewport.width}px`;
-                canvas.style.height = `${viewport.height}px`;
+            // Create canvas on demand (not as placeholder)
+            if (!canvas) {
+                canvas = document.createElement('canvas');
+                canvas.className = 'block';
+                wrapper.innerHTML = ''; // Remove placeholder text
+                wrapper.appendChild(canvas);
             }
 
-            // Cancel previous render on this specific canvas
-            if (renderTasks[canvas.id]) {
-                renderTasks[canvas.id].cancel();
-                delete renderTasks[canvas.id];
+            const canvasId = `pdf-canvas-scroll-${pageNum}`;
+            canvas.id = canvasId;
+
+            // HiDPI: canvas interno em resolução alta, visual no tamanho CSS
+            canvas.width = Math.round(w * dpr);
+            canvas.height = Math.round(h * dpr);
+            canvas.style.width = `${w}px`;
+            canvas.style.height = `${h}px`;
+
+            // Update wrapper size if this page differs from page 1
+            if (parseInt(wrapper.style.width) !== w || parseInt(wrapper.style.height) !== h) {
+                wrapper.style.width = `${w}px`;
+                wrapper.style.height = `${h}px`;
             }
 
-            const renderTask = page.render({ canvasContext: ctx, viewport: viewport });
-            renderTasks[canvas.id] = renderTask;
+            // Cancel previous render on this canvas
+            if (renderTasks[canvasId]) {
+                renderTasks[canvasId].cancel();
+                delete renderTasks[canvasId];
+            }
+
+            const ctx = canvas.getContext('2d');
+            ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+            const renderTask = page.render({ canvasContext: ctx, viewport });
+            renderTasks[canvasId] = renderTask;
 
             await renderTask.promise;
-            delete renderTasks[canvas.id];
+            delete renderTasks[canvasId];
 
-            canvas.dataset.rendered = "true";
-            delete canvas.dataset.rendering;
-
-            // NÃO paramos de observar. O Virtual Scroll precisa continuar observando para 
-            // renderizar de novo se o usuário rolar para cima.
-            // if (this.pageObserver) {
-            //    this.pageObserver.unobserve(canvas);
-            // }
+            canvas.dataset.rendered = 'true';
+            delete wrapper.dataset.rendering;
         } catch (e) {
-            delete canvas.dataset.rendering; // Allow retry on error
-            if (e.name === 'RenderingCancelledException') {
-                return;
-            }
+            delete wrapper.dataset.rendering;
+            if (e.name === 'RenderingCancelledException') return;
             console.error(`Erro render pag ${pageNum}:`, e);
         }
     },
 
-    unloadPage(canvas) {
-        // Se estiver renderizando, cancela
-        if (renderTasks[canvas.id]) {
-            renderTasks[canvas.id].cancel();
-            delete renderTasks[canvas.id];
+    unloadPage(wrapper) {
+        const pageNum = wrapper.dataset.page;
+        const canvasId = `pdf-canvas-scroll-${pageNum}`;
+
+        // Cancel active render
+        if (renderTasks[canvasId]) {
+            renderTasks[canvasId].cancel();
+            delete renderTasks[canvasId];
         }
+        delete wrapper.dataset.rendering;
 
-        delete canvas.dataset.rendering;
-
-        // Se já estava renderizado, limpa o canvas para liberar memória
-        if (canvas.dataset.rendered === "true") {
-            const ctx = canvas.getContext('2d');
-            // Mantém o tamanho para não perder o scroll, mas limpa os pixels
-            ctx.clearRect(0, 0, canvas.width, canvas.height);
-
-            delete canvas.dataset.rendered;
-            // console.log(`Memória liberada: Página ${canvas.dataset.page}`);
+        // Remove canvas entirely to free GPU memory, replace with lightweight placeholder
+        const canvas = wrapper.querySelector('canvas');
+        if (canvas && canvas.dataset.rendered === 'true') {
+            wrapper.innerHTML = `<div class="absolute inset-0 flex items-center justify-center">
+                <svg class="w-8 h-8 text-gray-300 dark:text-gray-600 animate-spin" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path></svg>
+            </div>`;
         }
     },
 
@@ -449,42 +540,45 @@ export default () => ({
     handlePdfScroll(event) {
         if (this.viewMode !== 'scroll') return;
 
+        // Block progress save during initial page restore to prevent page drift
+        if (this._isRestoring) return;
+
         const container = event.target;
 
-        // Debounce do Scroll para garantir renderização das páginas visíveis quando parar
-        clearTimeout(this.scrollTimeout);
-        this.scrollTimeout = setTimeout(() => {
-            const canvases = container.querySelectorAll('canvas[data-page]');
-            const containerRect = container.getBoundingClientRect();
+        // O(1) page calculation using cached page height
+        if (pageHeightCache > 0) {
+            const padding = 24; // p-6
+            const scrollPos = container.scrollTop + (container.clientHeight / 2);
+            const estimatedPage = Math.max(1, Math.min(
+                Math.ceil((scrollPos - padding) / pageHeightCache),
+                this.totalPages
+            ));
 
-            canvases.forEach(canvas => {
-                const rect = canvas.getBoundingClientRect();
-                // Se está visível e não renderizado (ex: debounce cancelou), força render
-                if (rect.top < containerRect.bottom && rect.bottom > containerRect.top) {
-                    const pageNum = parseInt(canvas.dataset.page);
-                    if (canvas.dataset.rendered !== "true" && !canvas.dataset.rendering) {
-                        this.renderSinglePageOnScroll(canvas, pageNum);
-                    }
-                }
-            });
-        }, 150);
-
-        const canvases = container.querySelectorAll('canvas[data-page]');
-
-        for (const canvas of canvases) {
-            const rect = canvas.getBoundingClientRect();
-            const containerRect = container.getBoundingClientRect();
-
-            // Se a página está visível (pelo menos 50% dela)
-            if (rect.top < containerRect.bottom && rect.bottom > containerRect.top + containerRect.height / 2) {
-                const newPage = parseInt(canvas.dataset.page);
-                if (newPage !== this.pageNum) {
-                    this.pageNum = newPage;
-                    this.updateProgress(newPage, this.totalPages);
-                }
-                break;
+            if (estimatedPage !== this.pageNum) {
+                this.pageNum = estimatedPage;
+                this.updateProgress(estimatedPage, this.totalPages);
             }
         }
+
+        // Debounced fallback: ensure visible pages are rendered after scroll stops
+        clearTimeout(this.scrollTimeout);
+        this.scrollTimeout = setTimeout(() => {
+            // Re-sort render queue by distance from current page
+            renderQueue.sort((a, b) => Math.abs(a.pageNum - this.pageNum) - Math.abs(b.pageNum - this.pageNum));
+
+            // Check a small window around current page for unrendered pages
+            const start = Math.max(1, this.pageNum - 2);
+            const end = Math.min(this.totalPages, this.pageNum + 4);
+            for (let i = start; i <= end; i++) {
+                const wrapper = document.getElementById(`pdf-page-${i}`);
+                if (wrapper) {
+                    const canvas = wrapper.querySelector('canvas');
+                    if (!canvas || canvas.dataset.rendered !== 'true') {
+                        this.enqueueRender(wrapper, i);
+                    }
+                }
+            }
+        }, 100);
     },
 
     goToPage(num) {
@@ -493,10 +587,10 @@ export default () => ({
         num = Math.max(1, Math.min(num, window._pdfState.numPages));
 
         if (this.viewMode === 'scroll') {
-            // Scroll até a página
             const canvas = document.getElementById(`pdf-page-${num}`);
             if (canvas) {
-                canvas.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                // Use instant scroll during restore to avoid animation-triggered scroll events
+                canvas.scrollIntoView({ behavior: this._isRestoring ? 'instant' : 'smooth', block: 'start' });
             }
         } else {
             this.renderPage(num);
@@ -519,7 +613,7 @@ export default () => ({
         if (this.pdfScale >= 3) return;
         this.pdfScale = Math.min(3, this.pdfScale + 0.2);
         if (this.viewMode === 'scroll') {
-            this.renderAllPages();
+            this.zoomScrollMode();
         } else {
             this.renderPage(this.pageNum);
         }
@@ -529,10 +623,60 @@ export default () => ({
         if (this.pdfScale <= 0.5) return;
         this.pdfScale = Math.max(0.5, this.pdfScale - 0.2);
         if (this.viewMode === 'scroll') {
-            this.renderAllPages();
+            this.zoomScrollMode();
         } else {
             this.renderPage(this.pageNum);
         }
+    },
+
+    async zoomScrollMode() {
+        const pdfDoc = window._pdfState.doc;
+        if (!pdfDoc) return;
+
+        const savedPage = this.pageNum;
+
+        // Block handlePdfScroll during zoom resize to prevent page drift
+        this._isRestoring = true;
+
+        const page1 = await pdfDoc.getPage(1);
+        const viewport1 = page1.getViewport({ scale: this.pdfScale });
+        const newWidth = Math.round(viewport1.width);
+        const newHeight = Math.round(viewport1.height);
+        const gap = 24;
+        pageHeightCache = newHeight + gap;
+
+        renderQueue = [];
+        Object.keys(renderTasks).forEach(key => {
+            if (key.startsWith('pdf-canvas-scroll-')) {
+                renderTasks[key].cancel();
+                delete renderTasks[key];
+            }
+        });
+        activeRenders = 0;
+
+        const container = document.getElementById('pdf-scroll-container');
+        if (!container) return;
+
+        const wrappers = container.querySelectorAll('.pdf-page-wrapper');
+        wrappers.forEach(wrapper => {
+            wrapper.style.width = `${newWidth}px`;
+            wrapper.style.height = `${newHeight}px`;
+            delete wrapper.dataset.rendering;
+
+            const canvas = wrapper.querySelector('canvas');
+            if (canvas) {
+                wrapper.innerHTML = `<div class="absolute inset-0 flex items-center justify-center">
+                    <svg class="w-8 h-8 text-gray-300 dark:text-gray-600 animate-spin" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path></svg>
+                </div>`;
+            }
+        });
+
+        // Restore position, then release the guard
+        requestAnimationFrame(() => {
+            this.pageNum = savedPage;
+            this.goToPage(savedPage);
+            setTimeout(() => { this._isRestoring = false; }, 600);
+        });
     },
 
     toggleFullscreen() {
@@ -563,7 +707,13 @@ export default () => ({
                     'Content-Type': 'application/json',
                     'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
                 },
-                body: JSON.stringify({ book_id: this.selectedBook.id, current_page: page, total_pages: total })
+                body: JSON.stringify({
+                    book_id: this.selectedBook.id,
+                    current_page: page,
+                    total_pages: total,
+                    view_mode: this.viewMode,
+                    pdf_scale: this.pdfScale
+                })
             });
             this.progressSaved = true;
             setTimeout(() => { this.progressSaved = false; }, 3000);

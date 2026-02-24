@@ -8,16 +8,7 @@ use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 
 class BookService
 {
-    /**
-     * Cursos principais do sistema.
-     */
-    /**
-     * Cursos principais do sistema.
-     */
-    private function getMainCoursesArray(): array
-    {
-        return array_filter(\App\Enums\Course::values(), fn($c) => $c !== \App\Enums\Course::Geral->value);
-    }
+
 
     /**
      * Retorna o total de livros verificados (com cache).
@@ -112,7 +103,7 @@ class BookService
         return $newBooks;
     }
 
-    // ... (applyCourseFilter and getMainCourses remain unchanged)
+
 
     /**
      * Aplica filtro de curso à query.
@@ -123,7 +114,8 @@ class BookService
      */
     private function applyCourseFilter($query, string $course)
     {
-        return $query->where('course', 'LIKE', "%{$course}%");
+        $escaped = str_replace(['%', '_'], ['\%', '\_'], $course);
+        return $query->where('course', 'LIKE', "%{$escaped}%");
     }
 
     /**
