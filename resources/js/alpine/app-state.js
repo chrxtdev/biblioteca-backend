@@ -1,14 +1,23 @@
-const renderTasks = {}; // Store active render tasks outside Alpine to avoid Proxy issues
+// ╔══════════════════════════════════════════════════════════════════╗
+// ║  VARIÁVEIS EXTERNAS AO ALPINE                                  ║
+// ║  Ficam fora do escopo reativo para evitar problemas com Proxy.  ║
+// ║  O Alpine.js envolve dados em Proxy, o que corrompe objetos     ║
+// ║  complexos como RenderTask do PDF.js.                           ║
+// ╚══════════════════════════════════════════════════════════════════╝
 
-// Render queue system for controlled concurrency
-const MAX_CONCURRENT_RENDERS = 3;
-let activeRenders = 0;
-let renderQueue = [];
-let pageHeightCache = 0; // Cached page height for O(1) scroll calculations
+const renderTasks = {};          // Tarefas de render ativas (PDF.js RenderTask)
+const MAX_CONCURRENT_RENDERS = 3; // Limite de renders paralelos na fila
+let activeRenders = 0;            // Contador de renders em andamento
+let renderQueue = [];             // Fila de páginas aguardando renderização
+let pageHeightCache = 0;          // Altura da página em px (cache para cálculo O(1) de scroll)
 
 export default () => ({
-    // Estado Geral da UI
-    isLoaded: true, // Já inicia carregado pois o script inline resolveu o flicker
+
+    // ╔══════════════════════════════════════════════════════════════╗
+    // ║  ESTADO DA UI — Controles visuais do dashboard              ║
+    // ╚══════════════════════════════════════════════════════════════╝
+
+    isLoaded: true,
     darkMode: localStorage.getItem('color-theme') === 'dark' || document.documentElement.classList.contains('dark'),
     sidebarOpen: !document.documentElement.classList.contains('sidebar-closed'),
 
@@ -25,7 +34,10 @@ export default () => ({
         return this.favoriteBookIds.includes(bookId);
     },
 
-    // Estado do Leitor de PDF
+    // ╔══════════════════════════════════════════════════════════════╗
+    // ║  ESTADO DO LEITOR DE PDF                                    ║
+    // ╚══════════════════════════════════════════════════════════════╝
+
     selectedBook: null,
     pageNum: 1,
     totalPages: 0,
@@ -33,11 +45,14 @@ export default () => ({
     loading: false,
     pdfError: null,
     progressSaved: false,
-    viewMode: 'single', // 'single', 'double', 'scroll'
+    viewMode: 'single',   // 'single' | 'double' | 'scroll'
     isFullscreen: false,
     pageObserver: null,
 
-    // Toast Notification
+    // ╔══════════════════════════════════════════════════════════════╗
+    // ║  TOAST — Sistema de notificações temporárias                ║
+    // ╚══════════════════════════════════════════════════════════════╝
+
     toast: { show: false, message: '', type: 'success' },
 
     showToast(message, type = 'success') {
@@ -47,38 +62,44 @@ export default () => ({
         setTimeout(() => this.toast.show = false, 3000);
     },
 
+    // ╔══════════════════════════════════════════════════════════════╗
+    // ║  INICIALIZAÇÃO — Configurações ao carregar a página         ║
+    // ╚══════════════════════════════════════════════════════════════╝
+
     init() {
-        // Signal CSS that Alpine is ready (removes opacity mask)
+        // Sinaliza ao CSS que o Alpine carregou (remove máscara de opacidade anti-flicker)
         document.documentElement.classList.add('alpine-ready');
 
+        // Persiste preferência de tema no localStorage
         this.$watch('darkMode', val => {
             localStorage.setItem('color-theme', val ? 'dark' : 'light');
             if (val) document.documentElement.classList.add('dark');
             else document.documentElement.classList.remove('dark');
         });
 
+        // Persiste estado da sidebar no localStorage
         this.$watch('sidebarOpen', val => {
             localStorage.setItem('sidebarOpen', val);
             if (!val) document.documentElement.classList.add('sidebar-closed');
             else document.documentElement.classList.remove('sidebar-closed');
         });
 
+        // Sincroniza estado de fullscreen com o navegador
         document.addEventListener('fullscreenchange', () => {
             this.isFullscreen = !!document.fullscreenElement;
         });
 
+        // Exibe mensagem flash do servidor (se existir)
         const flashMessage = document.body.dataset.flashMessage;
         const flashType = document.body.dataset.flashType || 'success';
-
         if (flashMessage) {
             this.$nextTick(() => this.showToast(flashMessage, flashType));
         }
 
-        // Reage à mudança de modo de visualização
+        // Reage à mudança de modo de visualização do PDF
         this.$watch('viewMode', value => {
             if (!window._pdfState.doc) return;
-
-            // Pequeno delay para garantir que x-show atualizou o DOM
+            // Delay mínimo garante que x-show atualizou o DOM antes de renderizar
             setTimeout(() => {
                 if (value === 'scroll') {
                     this.renderAllPages();
@@ -91,6 +112,11 @@ export default () => ({
 
     toggleTheme() { this.darkMode = !this.darkMode; },
 
+    // ╔══════════════════════════════════════════════════════════════╗
+    // ║  AÇÕES DO DASHBOARD — Novidades, detalhes                   ║
+    // ╚══════════════════════════════════════════════════════════════╝
+
+    /** Marca as novidades como vistas via API */
     async markNewsSeen() {
         if (this.newsSeen) return;
         this.newsSeen = true;
@@ -105,11 +131,17 @@ export default () => ({
         } catch (e) { console.error('Erro ao marcar como visto:', e); }
     },
 
+    /** Abre painel lateral com detalhes do livro */
     openDetails(book) {
         this.selectedBook = book;
         this.showDetails = true;
     },
 
+    // ╔══════════════════════════════════════════════════════════════╗
+    // ║  LEITOR DE PDF — Abrir, fechar, carregar                    ║
+    // ╚══════════════════════════════════════════════════════════════╝
+
+    /** Abre o modal do leitor, restaura preferências salvas e carrega o PDF */
     async openReader(book) {
         this.selectedBook = book;
         this.showReader = true;
@@ -125,7 +157,7 @@ export default () => ({
         this.viewMode = 'single';
         this.isFullscreen = false;
 
-        // Restore saved preferences (page, viewMode, zoom)
+        // Restaura preferências salvas (página, modo de visualização, zoom)
         try {
             const res = await fetch(`/api/reading-progress/${book.id}`).then(r => r.json());
             if (res.progress) {
@@ -144,24 +176,24 @@ export default () => ({
         this.loadPdf(`/storage/${book.file_path}`);
     },
 
+    /** Salva o progresso, limpa recursos e fecha o modal do leitor */
     async closeReader() {
         // Salva progresso antes de fechar
         if (window._pdfState.doc && this.selectedBook) {
             await this.saveProgressNow(this.pageNum, this.totalPages);
         }
 
-        // Sair do fullscreen se estiver
         if (document.fullscreenElement) {
             document.exitFullscreen();
         }
 
-        // Clean up observer
+        // Desconecta observer de visibilidade das páginas
         if (this.pageObserver) {
             this.pageObserver.disconnect();
             this.pageObserver = null;
         }
 
-        // Cancel all active renders and clear queue
+        // Cancela todos os renders pendentes e limpa a fila
         Object.keys(renderTasks).forEach(key => {
             if (renderTasks[key]) {
                 renderTasks[key].cancel();
@@ -180,6 +212,7 @@ export default () => ({
         this.pdfError = null;
     },
 
+    /** Carrega o documento PDF via PDF.js e inicia a renderização */
     async loadPdf(url) {
         try {
             this.pdfError = null;
@@ -191,7 +224,7 @@ export default () => ({
             const loadingTask = window.pdfjsLib.getDocument(url);
             const pdfDoc = await loadingTask.promise;
 
-            // Armazena fora do Alpine para evitar Proxy
+            // Armazena fora do Alpine para evitar Proxy corrompendo o objeto
             window._pdfState.doc = pdfDoc;
             window._pdfState.numPages = pdfDoc.numPages;
             this.totalPages = pdfDoc.numPages;
@@ -208,6 +241,7 @@ export default () => ({
         }
     },
 
+    /** Tenta recarregar o PDF após um erro */
     retryLoadPdf() {
         if (this.selectedBook) {
             this.loading = true;
@@ -216,27 +250,29 @@ export default () => ({
         }
     },
 
+    // ╔══════════════════════════════════════════════════════════════╗
+    // ║  RENDERIZAÇÃO PAGINADA — Modos single e double              ║
+    // ║  Renderiza 1 ou 2 páginas no canvas principal com HiDPI     ║
+    // ╚══════════════════════════════════════════════════════════════╝
+
     async renderPage(num) {
         const pdfDoc = window._pdfState.doc;
         if (!pdfDoc) return;
 
-        // Validar número da página
         num = Math.max(1, Math.min(num, pdfDoc.numPages));
 
         this.loading = true;
         try {
-            // Cancel previous render on main canvas
+            // Cancela render anterior no canvas principal
             if (renderTasks['pdf-canvas']) {
                 renderTasks['pdf-canvas'].cancel();
                 delete renderTasks['pdf-canvas'];
             }
 
-            // Renderiza página principal com suporte a HiDPI
             const page = await pdfDoc.getPage(num);
             const canvas = document.getElementById('pdf-canvas');
-            if (!canvas) {
-                throw new Error("Canvas não encontrado");
-            }
+            if (!canvas) throw new Error("Canvas não encontrado");
+
             const ctx = canvas.getContext('2d');
             const dpr = window.devicePixelRatio || 1;
             const viewport = page.getViewport({ scale: this.pdfScale });
@@ -254,12 +290,11 @@ export default () => ({
             await renderTask.promise;
             delete renderTasks['pdf-canvas'];
 
-            // Se modo duplo, renderiza segunda página
+            // Modo duplo: renderiza a página seguinte no segundo canvas
             if (this.viewMode === 'double' && num + 1 <= pdfDoc.numPages) {
-                // Pequeno delay para garantir que o elemento canvas-2 esteja visível (x-show)
+                // Delay garante que x-show mostrou o canvas-2
                 await new Promise(resolve => setTimeout(resolve, 50));
 
-                // Cancel previous render on second canvas
                 if (renderTasks['pdf-canvas-2']) {
                     renderTasks['pdf-canvas-2'].cancel();
                     delete renderTasks['pdf-canvas-2'];
@@ -287,7 +322,7 @@ export default () => ({
             this.loading = false;
             this.pageNum = num;
 
-            // Scroll para o topo do container em visualização paginada
+            // Volta o scroll pro topo no modo paginado
             if (this.viewMode !== 'scroll') {
                 const container = document.getElementById('pdf-container');
                 if (container) container.scrollTop = 0;
@@ -295,51 +330,59 @@ export default () => ({
 
             this.updateProgress(num, pdfDoc.numPages);
         } catch (error) {
-            if (error.name === 'RenderingCancelledException') {
-                // Ignore cancelled errors
-                return;
-            }
+            if (error.name === 'RenderingCancelledException') return;
             console.error("Erro na renderização:", error);
             this.loading = false;
             this.pdfError = `Erro ao renderizar página ${num}: ${error.message}`;
         }
     },
 
-    // --- Render Queue System ---
-    enqueueRender(wrapper, pageNum) {
-        // Don't add duplicates
-        if (renderQueue.some(item => item.pageNum === pageNum)) return;
+    // ╔══════════════════════════════════════════════════════════════╗
+    // ║  FILA DE RENDERIZAÇÃO — Controle de concorrência            ║
+    // ║  Limita renders paralelos (máx 3) e prioriza páginas        ║
+    // ║  mais próximas da posição atual do usuário.                  ║
+    // ╚══════════════════════════════════════════════════════════════╝
 
+    /** Adiciona página na fila, ordenada por proximidade da página atual */
+    enqueueRender(wrapper, pageNum) {
+        if (renderQueue.some(item => item.pageNum === pageNum)) return;
         renderQueue.push({ wrapper, pageNum });
-        // Sort by distance from current page (closer = higher priority)
         renderQueue.sort((a, b) => Math.abs(a.pageNum - this.pageNum) - Math.abs(b.pageNum - this.pageNum));
         this.processRenderQueue();
     },
 
+    /** Remove página da fila (quando sai da área visível) */
     dequeueRender(pageNum) {
         renderQueue = renderQueue.filter(item => item.pageNum !== pageNum);
     },
 
+    /** Processa a fila respeitando o limite de renders concorrentes */
     async processRenderQueue() {
         while (renderQueue.length > 0 && activeRenders < MAX_CONCURRENT_RENDERS) {
             const item = renderQueue.shift();
             if (!item) break;
 
-            // Skip if wrapper was removed from DOM or already rendered
+            // Pula se o wrapper saiu do DOM ou já foi renderizado
             if (!item.wrapper.isConnected) continue;
             const canvas = item.wrapper.querySelector('canvas');
             if (canvas && canvas.dataset.rendered === 'true') continue;
 
             activeRenders++;
-            // Fire and forget — don't await, let multiple run concurrently
+            // Dispara sem await — múltiplos renders rodam em paralelo
             this.renderSinglePageOnScroll(item.wrapper, item.pageNum).finally(() => {
                 activeRenders--;
-                // Process next in queue after one finishes
                 this.processRenderQueue();
             });
         }
     },
 
+    // ╔══════════════════════════════════════════════════════════════╗
+    // ║  ROLAGEM CONTÍNUA — Lazy loading com IntersectionObserver   ║
+    // ║  Cria placeholders leves para todas as páginas e renderiza   ║
+    // ║  sob demanda conforme o usuário rola o documento.            ║
+    // ╚══════════════════════════════════════════════════════════════╝
+
+    /** Prepara o modo scroll: cria placeholders e configura o observer */
     async renderAllPages() {
         const pdfDoc = window._pdfState.doc;
         if (!pdfDoc) return;
@@ -348,13 +391,13 @@ export default () => ({
         const container = document.getElementById('pdf-scroll-container');
         if (!container) return;
 
-        // Clean up previous state
+        // Limpa estado anterior
         if (this.pageObserver) {
             this.pageObserver.disconnect();
             this.pageObserver = null;
         }
 
-        // Cancel all active render tasks
+        // Cancela todos os renders em andamento
         Object.keys(renderTasks).forEach(key => {
             if (renderTasks[key]) {
                 renderTasks[key].cancel();
@@ -368,7 +411,7 @@ export default () => ({
         window._pdfState.renderedPages = [];
 
         try {
-            // Get first page dimensions for placeholders
+            // Usa dimensões da página 1 como base para os placeholders
             const page1 = await pdfDoc.getPage(1);
             const viewport1 = page1.getViewport({ scale: this.pdfScale });
             const pageWidth = Math.round(viewport1.width);
@@ -376,7 +419,7 @@ export default () => ({
             const gap = 24; // mb-6 = 1.5rem = 24px
             pageHeightCache = pageHeight + gap;
 
-            // Build ALL placeholders at once via DocumentFragment (single reflow)
+            // Cria TODOS os placeholders de uma vez via DocumentFragment (único reflow)
             const fragment = document.createDocumentFragment();
 
             for (let i = 1; i <= pdfDoc.numPages; i++) {
@@ -389,7 +432,7 @@ export default () => ({
                 wrapper.style.display = 'block';
                 wrapper.style.overflow = 'hidden';
 
-                // Lightweight placeholder with page number
+                // Placeholder com spinner de carregamento
                 wrapper.innerHTML = `<div class="absolute inset-0 flex items-center justify-center">
                     <svg class="w-8 h-8 text-gray-300 dark:text-gray-600 animate-spin" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path></svg>
                 </div>`;
@@ -399,7 +442,7 @@ export default () => ({
 
             container.appendChild(fragment);
 
-            // Root MUST be the scrollable parent (#pdf-container), not this non-scrolling child
+            // O root DEVE ser o div com overflow:auto (#pdf-container), não o filho sem scroll
             const scrollRoot = document.getElementById('pdf-container');
             this.pageObserver = new IntersectionObserver((entries) => {
                 entries.forEach(entry => {
@@ -419,14 +462,14 @@ export default () => ({
                 threshold: 0
             });
 
-            // Observe all wrappers
+            // Observa todos os wrappers
             const wrappers = container.querySelectorAll('.pdf-page-wrapper');
             wrappers.forEach(w => this.pageObserver.observe(w));
 
             this.loading = false;
 
-            // Restore scroll position and force-render current page
-            // Flag prevents handlePdfScroll from saving intermediate positions during restore
+            // Restaura posição de scroll e renderiza a página atual
+            // A flag _isRestoring bloqueia handlePdfScroll durante a restauração
             this._isRestoring = true;
             requestAnimationFrame(() => {
                 this.goToPage(this.pageNum);
@@ -434,28 +477,29 @@ export default () => ({
                 if (currentWrapper) {
                     this.renderSinglePageOnScroll(currentWrapper, this.pageNum);
                 }
-                // Release after scroll animation settles
+                // Libera após o scroll estabilizar
                 setTimeout(() => { this._isRestoring = false; }, 600);
             });
 
         } catch (error) {
-            console.error('Erro lazy load:', error);
+            console.error('Erro ao montar rolagem contínua:', error);
             this.loading = false;
             this.pdfError = error.message;
         }
     },
 
+    /** Renderiza uma única página no modo scroll com suporte HiDPI */
     async renderSinglePageOnScroll(wrapper, pageNum) {
         let canvas = wrapper.querySelector('canvas');
 
-        // Already rendered
+        // Já renderizada — ignora
         if (canvas && canvas.dataset.rendered === 'true') return;
 
-        // Already rendering — verify task is still active
+        // Já renderizando — verifica se a task ainda é válida
         if (wrapper.dataset.rendering === 'true') {
             const canvasId = `pdf-canvas-scroll-${pageNum}`;
-            if (renderTasks[canvasId]) return; // Legit in-progress
-            delete wrapper.dataset.rendering; // Stale state, allow retry
+            if (renderTasks[canvasId]) return;
+            delete wrapper.dataset.rendering; // Estado obsoleto, permite retry
         }
 
         wrapper.dataset.rendering = 'true';
@@ -470,30 +514,30 @@ export default () => ({
             const w = Math.round(viewport.width);
             const h = Math.round(viewport.height);
 
-            // Create canvas on demand (not as placeholder)
+            // Cria o canvas sob demanda (substitui o placeholder)
             if (!canvas) {
                 canvas = document.createElement('canvas');
                 canvas.className = 'block';
-                wrapper.innerHTML = ''; // Remove placeholder text
+                wrapper.innerHTML = '';
                 wrapper.appendChild(canvas);
             }
 
             const canvasId = `pdf-canvas-scroll-${pageNum}`;
             canvas.id = canvasId;
 
-            // HiDPI: canvas interno em resolução alta, visual no tamanho CSS
+            // HiDPI: resolução interna alta, tamanho visual via CSS
             canvas.width = Math.round(w * dpr);
             canvas.height = Math.round(h * dpr);
             canvas.style.width = `${w}px`;
             canvas.style.height = `${h}px`;
 
-            // Update wrapper size if this page differs from page 1
+            // Ajusta wrapper caso esta página tenha dimensões diferentes da página 1
             if (parseInt(wrapper.style.width) !== w || parseInt(wrapper.style.height) !== h) {
                 wrapper.style.width = `${w}px`;
                 wrapper.style.height = `${h}px`;
             }
 
-            // Cancel previous render on this canvas
+            // Cancela render anterior neste canvas
             if (renderTasks[canvasId]) {
                 renderTasks[canvasId].cancel();
                 delete renderTasks[canvasId];
@@ -512,22 +556,23 @@ export default () => ({
         } catch (e) {
             delete wrapper.dataset.rendering;
             if (e.name === 'RenderingCancelledException') return;
-            console.error(`Erro render pag ${pageNum}:`, e);
+            console.error(`Erro ao renderizar página ${pageNum}:`, e);
         }
     },
 
+    /** Descarrega uma página renderizada para liberar memória GPU */
     unloadPage(wrapper) {
         const pageNum = wrapper.dataset.page;
         const canvasId = `pdf-canvas-scroll-${pageNum}`;
 
-        // Cancel active render
+        // Cancela render ativo nesta página
         if (renderTasks[canvasId]) {
             renderTasks[canvasId].cancel();
             delete renderTasks[canvasId];
         }
         delete wrapper.dataset.rendering;
 
-        // Remove canvas entirely to free GPU memory, replace with lightweight placeholder
+        // Substitui canvas por placeholder leve (spinner)
         const canvas = wrapper.querySelector('canvas');
         if (canvas && canvas.dataset.rendered === 'true') {
             wrapper.innerHTML = `<div class="absolute inset-0 flex items-center justify-center">
@@ -536,18 +581,22 @@ export default () => ({
         }
     },
 
+    // ╔══════════════════════════════════════════════════════════════╗
+    // ║  SCROLL — Detecção de página e renderização sob demanda     ║
+    // ╚══════════════════════════════════════════════════════════════╝
 
+    /** Detecta qual página está visível durante a rolagem (cálculo O(1)) */
     handlePdfScroll(event) {
         if (this.viewMode !== 'scroll') return;
 
-        // Block progress save during initial page restore to prevent page drift
+        // Bloqueia durante restauração de posição para evitar drift de página
         if (this._isRestoring) return;
 
         const container = event.target;
 
-        // O(1) page calculation using cached page height
+        // Cálculo O(1): usa a altura cacheada para estimar a página pelo scrollTop
         if (pageHeightCache > 0) {
-            const padding = 24; // p-6
+            const padding = 24;
             const scrollPos = container.scrollTop + (container.clientHeight / 2);
             const estimatedPage = Math.max(1, Math.min(
                 Math.ceil((scrollPos - padding) / pageHeightCache),
@@ -560,13 +609,12 @@ export default () => ({
             }
         }
 
-        // Debounced fallback: ensure visible pages are rendered after scroll stops
+        // Fallback com debounce: garante que páginas próximas estão renderizadas
         clearTimeout(this.scrollTimeout);
         this.scrollTimeout = setTimeout(() => {
-            // Re-sort render queue by distance from current page
             renderQueue.sort((a, b) => Math.abs(a.pageNum - this.pageNum) - Math.abs(b.pageNum - this.pageNum));
 
-            // Check a small window around current page for unrendered pages
+            // Verifica janela de ±4 páginas ao redor da atual
             const start = Math.max(1, this.pageNum - 2);
             const end = Math.min(this.totalPages, this.pageNum + 4);
             for (let i = start; i <= end; i++) {
@@ -581,6 +629,11 @@ export default () => ({
         }, 100);
     },
 
+    // ╔══════════════════════════════════════════════════════════════╗
+    // ║  NAVEGAÇÃO — Ir para página, anterior, próxima              ║
+    // ╚══════════════════════════════════════════════════════════════╝
+
+    /** Navega até uma página específica (scroll suave ou render direto) */
     goToPage(num) {
         num = parseInt(num);
         if (isNaN(num) || !window._pdfState.doc) return;
@@ -589,7 +642,7 @@ export default () => ({
         if (this.viewMode === 'scroll') {
             const canvas = document.getElementById(`pdf-page-${num}`);
             if (canvas) {
-                // Use instant scroll during restore to avoid animation-triggered scroll events
+                // Scroll instantâneo durante restauração para evitar eventos intermediários
                 canvas.scrollIntoView({ behavior: this._isRestoring ? 'instant' : 'smooth', block: 'start' });
             }
         } else {
@@ -608,6 +661,10 @@ export default () => ({
         const step = this.viewMode === 'double' ? 2 : 1;
         this.renderPage(Math.min(this.totalPages, this.pageNum + step));
     },
+
+    // ╔══════════════════════════════════════════════════════════════╗
+    // ║  ZOOM — Aumentar, diminuir, reescalar no scroll             ║
+    // ╚══════════════════════════════════════════════════════════════╝
 
     zoomIn() {
         if (this.pdfScale >= 3) return;
@@ -629,13 +686,14 @@ export default () => ({
         }
     },
 
+    /** Reescala todas as páginas no modo scroll sem perder a posição */
     async zoomScrollMode() {
         const pdfDoc = window._pdfState.doc;
         if (!pdfDoc) return;
 
         const savedPage = this.pageNum;
 
-        // Block handlePdfScroll during zoom resize to prevent page drift
+        // Bloqueia handlePdfScroll durante o resize para evitar drift
         this._isRestoring = true;
 
         const page1 = await pdfDoc.getPage(1);
@@ -645,6 +703,7 @@ export default () => ({
         const gap = 24;
         pageHeightCache = newHeight + gap;
 
+        // Cancela renders pendentes do modo scroll
         renderQueue = [];
         Object.keys(renderTasks).forEach(key => {
             if (key.startsWith('pdf-canvas-scroll-')) {
@@ -657,6 +716,7 @@ export default () => ({
         const container = document.getElementById('pdf-scroll-container');
         if (!container) return;
 
+        // Atualiza dimensões e troca canvas por placeholder (será re-renderizado pelo observer)
         const wrappers = container.querySelectorAll('.pdf-page-wrapper');
         wrappers.forEach(wrapper => {
             wrapper.style.width = `${newWidth}px`;
@@ -671,7 +731,7 @@ export default () => ({
             }
         });
 
-        // Restore position, then release the guard
+        // Restaura posição e libera a trava
         requestAnimationFrame(() => {
             this.pageNum = savedPage;
             this.goToPage(savedPage);
@@ -679,25 +739,35 @@ export default () => ({
         });
     },
 
+    // ╔══════════════════════════════════════════════════════════════╗
+    // ║  TELA CHEIA                                                 ║
+    // ╚══════════════════════════════════════════════════════════════╝
+
     toggleFullscreen() {
         const container = document.getElementById('pdf-reader-container');
         if (!container) return;
 
         if (!document.fullscreenElement) {
             container.requestFullscreen().catch(err => {
-                console.error('Erro ao entrar em fullscreen:', err);
+                console.error('Erro ao entrar em tela cheia:', err);
             });
         } else {
             document.exitFullscreen();
         }
     },
 
+    // ╔══════════════════════════════════════════════════════════════╗
+    // ║  PROGRESSO DE LEITURA — Salvar automaticamente via API      ║
+    // ╚══════════════════════════════════════════════════════════════╝
+
+    /** Agenda salvamento do progresso com debounce de 2 segundos */
     updateProgress(page, total) {
         clearTimeout(this.saveTimeout);
         this.progressSaved = false;
         this.saveTimeout = setTimeout(() => this.saveProgressNow(page, total), 2000);
     },
 
+    /** Envia progresso + preferências (zoom/modo) para a API */
     async saveProgressNow(page, total) {
         if (!this.selectedBook) return;
         try {
@@ -720,6 +790,11 @@ export default () => ({
         } catch (e) { console.error('Erro ao salvar progresso:', e); }
     },
 
+    // ╔══════════════════════════════════════════════════════════════╗
+    // ║  FAVORITOS — Marcar/desmarcar livros como favoritos         ║
+    // ╚══════════════════════════════════════════════════════════════╝
+
+    /** Alterna favorito via API e atualiza estado local */
     async toggleFavorite(bookId, currentState) {
         try {
             const response = await fetch(`/favorites/toggle/${bookId}`, {
@@ -731,12 +806,13 @@ export default () => ({
             });
             const data = await response.json();
             if (data.success) {
+                // Na página de favoritos, remove o card se desfavoritou
                 if (window.location.pathname.includes('/favorites') && !data.is_favorited) {
                     const card = document.querySelector(`#book-card-${bookId}`);
                     if (card) card.remove();
                 }
 
-                // Atualiza estado local
+                // Sincroniza array local de IDs favoritados
                 if (data.is_favorited) {
                     if (!this.favoriteBookIds.includes(bookId)) this.favoriteBookIds.push(bookId);
                 } else {
@@ -749,24 +825,24 @@ export default () => ({
         return currentState;
     },
 
+    // ╔══════════════════════════════════════════════════════════════╗
+    // ║  ATALHOS DE TECLADO — Navegação rápida no leitor            ║
+    // ╚══════════════════════════════════════════════════════════════╝
+
     handleKeydown(e) {
         if (!this.showReader) return;
 
-        // Ignorar se estiver digitando em input
+        // Ignora se estiver digitando em campo de texto
         if (['INPUT', 'TEXTAREA'].includes(e.target.tagName)) return;
 
         switch (e.key) {
             case 'ArrowRight':
             case 'ArrowDown':
-                if (this.viewMode !== 'scroll') {
-                    this.goToNextPage();
-                }
+                if (this.viewMode !== 'scroll') this.goToNextPage();
                 break;
             case 'ArrowLeft':
             case 'ArrowUp':
-                if (this.viewMode !== 'scroll') {
-                    this.goToPrevPage();
-                }
+                if (this.viewMode !== 'scroll') this.goToPrevPage();
                 break;
             case '+':
             case '=':

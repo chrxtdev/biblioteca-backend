@@ -2,7 +2,7 @@
 <div class="p-6 space-y-6">
     <!-- Hero Section -->
     <div class="relative bg-gradient-to-r from-gray-900 to-gray-800 rounded-3xl p-8 md:p-12 overflow-hidden shadow-2xl mb-10">
-        <!-- Background Pattern -->
+<!-- Padrão decorativo de fundo -->
         <div class="absolute inset-0 opacity-10">
             <svg class="h-full w-full" viewBox="0 0 100 100" preserveAspectRatio="none">
                 <path d="M0 100 C 20 0 50 0 100 100 Z" fill="white" />
@@ -18,7 +18,7 @@
                     Bem-vindo ao seu acervo digital. Descubra livros, artigos e materiais acadêmicos selecionados para impulsionar seus estudos.
                 </p>
                 
-                <!-- Search Bar in Hero -->
+                <!-- Barra de Pesquisa no Hero -->
                 <form method="GET" action="{{ route('aluno') }}" class="relative w-full max-w-lg">
                     <div class="relative">
                         <input type="text" name="search" value="{{ request('search') }}"
@@ -36,7 +36,7 @@
                 </form>
             </div>
             
-            <!-- Quick Actions -->
+            <!-- Ações Rápidas -->
             <div class="flex flex-col gap-4">
                  <button @click="showCreate = true"
                     class="group flex items-center gap-3 bg-teal-500 hover:bg-teal-400 text-white px-6 py-4 rounded-xl font-bold shadow-lg hover:shadow-teal-500/30 transform hover:-translate-y-1 transition-all duration-300">
@@ -49,7 +49,7 @@
         </div>
     </div>
 
-    <!-- Category Filters with Arrow Navigation -->
+    <!-- Filtros por Categoria com Navegação por Setas -->
     <div class="mb-8 relative" x-data="{
         scrollContainer: null,
         canScrollLeft: false,
@@ -69,14 +69,14 @@
             this.scrollContainer.scrollBy({ left: dir * 250, behavior: 'smooth' });
         }
     }">
-        <!-- Left Arrow -->
+        <!-- Seta Esquerda -->
         <button x-show="canScrollLeft" x-transition:enter="transition ease-out duration-200" x-transition:enter-start="opacity-0" x-transition:enter-end="opacity-100" x-transition:leave="transition ease-in duration-150"
             @click="scrollBy(-1)"
             class="absolute left-0 top-1/2 -translate-y-1/2 z-10 w-9 h-9 flex items-center justify-center rounded-full bg-white dark:bg-gray-700 shadow-lg border border-gray-200 dark:border-gray-600 text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-600 transition-colors cursor-pointer" x-cloak>
             <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path></svg>
         </button>
 
-        <!-- Scrollable Categories -->
+        <!-- Categorias com Scroll Horizontal -->
         <div x-ref="categoryScroll" class="flex gap-3 overflow-x-auto scrollbar-hide scroll-smooth px-1 py-1">
             <a href="{{ route('aluno') }}" 
                class="whitespace-nowrap px-6 py-2.5 rounded-full font-medium transition-all duration-200 {{ !request('course') && !request('search') ? 'bg-gray-900 dark:bg-white text-white dark:text-gray-900 shadow-lg' : 'bg-white dark:bg-gray-800 text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 border border-gray-200 dark:border-gray-700' }}">
@@ -91,14 +91,14 @@
             @endforeach
         </div>
 
-        <!-- Right Arrow -->
+        <!-- Seta Direita -->
         <button x-show="canScrollRight" x-transition:enter="transition ease-out duration-200" x-transition:enter-start="opacity-0" x-transition:enter-end="opacity-100" x-transition:leave="transition ease-in duration-150"
             @click="scrollBy(1)"
             class="absolute right-0 top-1/2 -translate-y-1/2 z-10 w-9 h-9 flex items-center justify-center rounded-full bg-white dark:bg-gray-700 shadow-lg border border-gray-200 dark:border-gray-600 text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-600 transition-colors cursor-pointer" x-cloak>
             <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path></svg>
         </button>
 
-        <!-- Gradient masks for visual hint -->
+        <!-- Gradientes nas bordas (indicam que há mais conteúdo) -->
         <div x-show="canScrollLeft" class="absolute left-8 top-0 bottom-0 w-8 bg-gradient-to-r from-gray-100 dark:from-gray-900 to-transparent pointer-events-none z-[5]" x-cloak></div>
         <div x-show="canScrollRight" class="absolute right-8 top-0 bottom-0 w-8 bg-gradient-to-l from-gray-100 dark:from-gray-900 to-transparent pointer-events-none z-[5]" x-cloak></div>
     </div>
@@ -271,14 +271,14 @@
                                 this.container.scrollBy({ left: dir * (cardWidth * 2 + 32), behavior: 'smooth' });
                             }
                         }">
-                            {{-- Left Arrow --}}
+                            {{-- Seta Esquerda --}}
                             <button x-show="canLeft" x-transition
                                 @click="scroll(-1)"
                                 class="absolute left-2 top-1/2 -translate-y-1/2 z-10 w-10 h-10 flex items-center justify-center rounded-full bg-white/95 dark:bg-gray-700/95 shadow-xl border border-gray-200 dark:border-gray-600 text-gray-700 dark:text-gray-200 hover:bg-white dark:hover:bg-gray-600 hover:scale-110 transition-all cursor-pointer backdrop-blur-sm" x-cloak>
                                 <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M15 19l-7-7 7-7"></path></svg>
                             </button>
 
-                            {{-- Scrollable Book Strip --}}
+                            {{-- Faixa de Livros com Scroll Horizontal --}}
                             <div x-ref="bookScroll" class="flex gap-4 overflow-x-auto scrollbar-hide scroll-smooth px-6 py-5">
                                 @foreach($courseBooks as $book)
                                     <div class="book-carousel-item flex-shrink-0 w-40 sm:w-44 md:w-48">
@@ -291,14 +291,14 @@
                                 @endforeach
                             </div>
 
-                            {{-- Right Arrow --}}
+                            {{-- Seta Direita --}}
                             <button x-show="canRight" x-transition
                                 @click="scroll(1)"
                                 class="absolute right-2 top-1/2 -translate-y-1/2 z-10 w-10 h-10 flex items-center justify-center rounded-full bg-white/95 dark:bg-gray-700/95 shadow-xl border border-gray-200 dark:border-gray-600 text-gray-700 dark:text-gray-200 hover:bg-white dark:hover:bg-gray-600 hover:scale-110 transition-all cursor-pointer backdrop-blur-sm" x-cloak>
                                 <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M9 5l7 7-7 7"></path></svg>
                             </button>
 
-                            {{-- Gradient Fade Edges --}}
+                            {{-- Gradientes nas bordas --}}
                             <div x-show="canLeft" class="absolute left-0 top-0 bottom-0 w-12 bg-gradient-to-r from-white dark:from-gray-800 to-transparent pointer-events-none z-[5] rounded-l-xl" x-cloak></div>
                             <div x-show="canRight" class="absolute right-0 top-0 bottom-0 w-12 bg-gradient-to-l from-white dark:from-gray-800 to-transparent pointer-events-none z-[5] rounded-r-xl" x-cloak></div>
                         </div>
