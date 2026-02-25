@@ -16,20 +16,42 @@ class BookController extends Controller
     ) {}
 
     /**
-     * Exibe o dashboard com listagem de livros.
+     * Exibe o dashboard (Blade) ou retorna JSON quando via API.
+     *
+     * Rotas:
+     *   GET /aluno         → View Blade (requer auth)
+     *   GET /api/livros    → JSON público (vitrine de livros)
      */
     public function index(Request $request)
     {
-        $user = $request->user();
         $search = $request->input('search');
         $course = $request->input('course');
         $perPage = (int) $request->input('per_page', 24);
 
-        // Determina se deve mostrar layout vitrine ou grid filtrado
+        $books = $this->bookService->getVerifiedBooks($search, $course, $perPage);
+
+        // Responde JSON para chamadas API (Accept: application/json ou rota /api/*)
+        if ($request->wantsJson() || $request->is('api/*')) {
+            return response()->json([
+                'data' => $books->items(),
+                'meta' => [
+                    'current_page' => $books->currentPage(),
+                    'last_page' => $books->lastPage(),
+                    'per_page' => $books->perPage(),
+                    'total' => $books->total(),
+                ],
+                'filters' => [
+                    'search' => $search,
+                    'course' => $course,
+                ],
+            ]);
+        }
+
+        // View Blade para o dashboard web
         $showShowcase = !$course && !$search;
 
         return view('dashboard', [
-            'books' => $this->bookService->getVerifiedBooks($search, $course, $perPage),
+            'books' => $books,
             'booksByCourse' => $showShowcase ? $this->bookService->getBooksByCourse() : collect(),
             'newBooks' => $this->bookService->getNewBooks(),
             'search' => $search,
